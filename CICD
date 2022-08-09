@@ -1,0 +1,143 @@
+# 지속적 배포 CI / CD
+
+## 도대체 CI / CD 가 뭐고?
+
+어플리케이션 개발 단계부터 배포 할 때 까지의 모든 단계들을 자동화해서
+
+더 효율적이고 빠르게 사용자에게 빈번이 배포할 수 있도록 만드는 것!
+
+### CI : Continuous Integration 지속적 통합
+
+### CD : Continuous Delivery / Deployment 지속적 서비스 제공
+
+그러니까 지속적으로 개발자가 뚜닥뚜닥 완성한 코드를 통합(CI)하고
+
+그 merge된 코드들을 자동으로 배포(CD) 하는 것인 듯 한데..
+
+### CI 부터 좀 알아볼까?
+
+개발자가 코드를 치고 유지보수를 하면 Main Repository에 주기적으로 빌드해야 한다.
+
+이 때, merge 된 코드들이 자동으로 build 되고, 자동으로 test 되는 것을 의미한다.
+
+아래꺼는 읽어보면 좋아요~
+
+- 브랜치는 세부적인 기능별로 나누는 것이 좋다!
+    
+    
+    생각해보면 내가 짠 코드들을 수시로 Main Repository 에 merge 해줘야 하고,
+    
+    또, merge 하면서 다른 사람이 짠 코드도 내 코드에 pull 해야 하는데,
+    
+    협업 과정에서 자주 merge 해주지 않으면 충돌이 나기 일수다!
+    
+    이렇게 되면, 새로운 기능을 개발하기 위해 코드를 작성하는 시간보다,
+    
+    서로 merge 하다 충돌난 코드를 해결하는 시간이 더 길어지게 되고,
+    
+    자연스럽게 업무의 효율성이 떨어지게 된다.
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/aa6d726a-d839-4fcf-a6ec-4350b1d031b7/Untitled.png)
+    
+    문득 생각나는….. switchServiceImpl 오만 충돌의 기억..
+    
+    그렇기 때문에 협업을 할 때는 작은 기능 단위가 중요하다.
+    
+    하나의 기능도 세세하게 분리시켜 브랜치를 따고 자주자주 merge 해줘야 한다!
+    
+    자주자주 merge가 참 쉬워 보이면서도 어려운게
+    
+    기능 하나가 오랫동안 끝나지 않으면 에러가 수두룩 한 채로 push를 할 수 없기 때문에
+    
+    오랫동안 merge 를 하지 못하는 경우가 많다.
+    
+
+CI의 더 중요한 포인트는
+
+### 빌드, 테스트의 자동화에 있다!
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/df1f7cc4-3d8a-44e9-bdd6-425e70f807ac/Untitled.png)
+
+개발자가 귀찮게 일일이 빌드하고, 테스트하지 않아도
+
+자동으로 이 모든 일련의 과정들이 라이프사이클(파이프라인) 처럼 주기적으로 진행되도록
+
+하는 것이 CI 의 핵심!
+
+### CI 어떻게 사용하나?
+
+1. 개발자가 코드를 칩니다.
+2. 코드리뷰를 받습니다.
+3. 무사히 코드리뷰에 통과하면 사내 메인 브랜치와 merge 합니다.
+4. 이후 **머지된 메인 브랜치는 사내에 있는 빌드 자동화 스크립트에 의해 자동으로 빌드**된다.
+5. 빌드 된 코드는 **자동으로 테스트가 실행된다. 역시나 테스트 스크립트가 존재**한다.
+6. 빌드도 잘 됐고, 테스트도 잘 됐다면 그린라이트가 뜹니다………
+7. 만약 뭔가 잘못됐다? 하면 그 개발자에게 오류를 알려준다고 함
+
+### 이제 CD를 좀 알아볼까?
+
+지속적 제공, 지속적 배포라고 했었는데
+
+마지막 배포 단계에서 자동화로 배포되는 것을 말한다.
+
+CI를 통해서 주기적으로 merge된 코드들이 자동으로 build 되고, Test 되었다면,
+
+이제 CD로 넘어가야 한다.
+
+### Continuous Deployment
+
+CI를 통해 release 할 준비를 마쳤으면, 자동으로 release 되도록 하는 것이 CD 이다.
+
+만약 자동으로 배포하지 않고, 수동으로 한다면?
+
+### Continuous Delivery
+
+진짜 릴리즈 해도 되는지 개발자나 검증팀이 검증 한 다음에 아 이제 배포해도 되겠다!
+
+하고 수동으로 배포한다.
+
+즉, CD 는 최종 단계가 자동화가 되었는지, 자동화가 되지 않았는지에 따라서도 나뉠 수 있다.
+
+**모~든 과정을 자동화 해 놓는다면 Deployment 이고,**
+
+**마지막에 수동으로 배포하면 Delivery 이다.**
+
+## CI / CD Tool
+
+- Jenkins
+- buildkite
+- gitHub Actions
+- bitbucket Pipelines
+
+## CI / CD 파이프라인
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/5f6d9501-b20a-4dc5-940a-f938d51d7758/Untitled.png)
+
+정리해보자!
+
+- ***CODE***
+    - 개발자가 코드를 치고 main branch에 주기적으로 merge 한다.
+- ***BUILD***
+    - 머지된 코드는 사내 스크립트를 통해 자동으로 빌드된다.
+- ***TEST***
+    - 빌드된 코드는 사내 스크립트를 통해 자동으로 TEST 된다.
+- ***RELEASE***
+    - TEST 까지 완료된 코드는 릴리즈 준비(검수, 검증)를 한다.
+- ***DEPLOY***
+    - 릴리즈 준비가 완료된 코드는 자동으로 배포된다.
+
+수동으로 릴리즈 준비(검수, 검증)를 하고난 후 수동으로 배포한다면 Delivery 이다.
+
+### 젠킨스 사용법 알아보기
+
+[젠킨스(Jenkins) 심플 튜토리얼 & 동작 구조](https://kwang1.tistory.com/m/23)
+
+# ref
+
+---
+
+[https://www.youtube.com/watch?v=X6QGhg19Kqg&list=PLgXGHBqgT2TvpJ_p9L_yZKPifgdBOzdVH&index=70](https://www.youtube.com/watch?v=X6QGhg19Kqg&list=PLgXGHBqgT2TvpJ_p9L_yZKPifgdBOzdVH&index=70)
+
+[https://www.youtube.com/watch?v=0Emq5FypiMM](https://www.youtube.com/watch?v=0Emq5FypiMM)
+
+[https://kwang1.tistory.com/m/23](https://kwang1.tistory.com/m/23)
