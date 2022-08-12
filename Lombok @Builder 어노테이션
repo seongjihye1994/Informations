@@ -1,0 +1,77 @@
+# Lombok @Builder 어노테이션
+
+롬복 플러그인이 지원하는 @Builder 어노테이션을 사용해보자!
+
+### DTO
+
+```java
+public class MemberInfo {
+	
+		private String name; // 필수 정보
+
+		private int age; // 선택 정보
+
+		private String address; // 선택 정보
+}
+```
+
+DTO 클래스에 name 필드는 필수적으로 입력받아야 하는 필드이고,
+
+나머지 age 와 address 는 있어도 되고, 없어도 되는 옵션 필드이다.
+
+이 3가지 필드로 생성자를 만들면 나올 수 있는 조합은?
+
+1. ***name***
+2. ***name + age***
+3. ***name + address***
+4. ***name + age + address***
+
+4가지 정도 될 것 같다.
+
+그럼 이 4가지 조합의 생성자를 모두 만들어야 하나??
+
+… 다 만들어 버리면 DTO 클래스가 너무 길어지고 복잡해진다!
+
+이럴 때 필요한 것이 바로
+
+### Lombok의 @Builder 어노테이션!
+
+DTO 의 클래스 레벨에 기재해주면 된다.
+
+```java
+**@Builder**
+public class MemberInfo {
+	
+		private String name; // 필수 정보
+
+		private int age; // 선택 정보
+
+		private String address; // 선택 정보
+}
+```
+
+롬복 플러그인이 지원하는 @Builder 어노테이션을 
+
+클래스 레벨에 정의하면 여러개의 생성자를 만들 필요가 없다.
+
+### 그럼 객체는 어떻게 생성하나??
+
+```java
+Member member = Member**.builder()** // **빌더어노테이션으로 생성된 빌더클래스 생성자**
+    .name("jihye")
+    .age(29)
+    .address("서울시")
+    **.build();**
+```
+
+new 키워드 없이 객체명.builder()로 객체를 생성한 후,
+
+필드를 세팅하고 마지막에 .build() 를 붙여준다.
+
+이러면 끝!
+
+# ref
+
+---
+
+[https://esoongan.tistory.com/82](https://esoongan.tistory.com/82)
