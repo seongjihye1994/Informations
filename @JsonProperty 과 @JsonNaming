@@ -1,0 +1,75 @@
+# `@JsonProperty` 과 @JsonNaming
+
+Client에서 **Post 로 넘어오는 Json 데이터는 스네이크 케이스**로 되어있다.
+
+하지만, Java에서 파라미터를 객체로 받으면(@RequestBody) 카멜 케이스로 생성된다.
+
+그래서 필드명(key)이 일치하지 않아 클라이언트의 요청은 200으로 떨어지지만,
+
+서버에서는 null 로 찍힐 수 있다.
+
+이 문제를 해결하려면 @JsonProperty 어노테이션이 필요하다.
+
+### @JsonProperty
+
+@JsonProperty 는 클라이언트에서 Post 로 요청하는 Json 데이터의 키값과
+
+서버의 DTO ***필드명이 일치하지 않아 값이 매핑되지 않는 문제를 해결***해준다.
+
+### 그럼 어떻게 사용하는거야?
+
+```java
+package com.ipageon.AltibaseReplication.DTO;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.*;
+
+@Getter
+@Builder
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+public class ReplicationAddInfo {
+
+    @JsonProperty("A")
+    private SideInfo a;
+
+    @JsonProperty("B")
+    private SideInfo b;
+}
+```
+
+이렇게 DTO 클래스의 필드명 위에다가 붙여주면 된다.
+
+그리고 () 안에 클라이언트에서 보내주는 key 값과 일치되게 작성해야 한다.
+
+이렇게 하면 SideInfo 내부에 있는 필드명도 같이 매핑 시켜준다!
+
+이렇게 **필드에 하나하나 기재해 주는 방법 말고 없는거야?**
+
+아니, @JsonNaming 을 사용하면 한방에 해결된다!
+
+### @JsonNaming
+
+```java
+package com.ipageon.AltibaseReplication.DTO;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.*;
+
+@Getter
+@Builder
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+**@JsonNaming(value = PropertyNamingStrategy.SnakeCaseStragy.class)**
+public class ReplicationAddInfo {
+
+    private SideInfo a;
+    private SideInfo b;
+}
+```
+
+이렇게 클래스 레벨에 @JsonNaming 을 기재하고, 
+
+value 값으로 전략을 스네이크 또는 카멜로 선택해서 기재해주면 된다!
