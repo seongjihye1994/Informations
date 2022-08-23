@@ -1,0 +1,14 @@
+캐싱의 목적: Disk I/O, Network I/O, 무거운 연산 등을 줄여 성능을 개선 하기 위함.
+DP(Dynamic Programming) 알고리즘에서도 사용됨
+Local Cache: 서버의 메모리를 사용
+네트워크 I/O가 발생하지 않기 때문에 매우 빠름
+scale out시 캐시 데이터를 동기화 시켜 주어야함
+Global Cache: 메모리 스토리지를 이용 (Redis, Memcached, Hazelcast)
+scale out을 하여도 서버들끼리 데이터 동기화를 할 필요 없음
+네트워크 I/O 발생
+데이터의 성격에 따라 Local Cache를 사용할 지 Global Cache를 사용할 지 결정
+ex. 데이터의 변경이 자주 일어나지 않는 지리 정보는 로컬 캐시를 이용하여도 무방
+캐싱 전략: 캐싱을 적용할 경우 가장 큰 문제점: DB와의 데이터 정합성
+캐싱된 데이터는 ttl을 통하여 expire 시키도록 하자. (개발자가 update 하는 경우를 최소화)
+캐싱 데이터와 DB 데이터를 같이 업데이트하여야 하는 상황에서는 다음과 같은 write전략을 고민해 볼 수 있음.
+Write Through vs Write Back
