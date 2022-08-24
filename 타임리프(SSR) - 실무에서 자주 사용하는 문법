@@ -1,0 +1,156 @@
+### 화면에 text 로 값 출력
+
+### `<span th:text="${nickname}"></span>`
+
+- nickname 이 있으면 출력되고, 없으면 출력 안됨.
+
+### 조건문으로 출력 / 미출력
+
+### `**<div th:if="${error}"><p>에러 발생</p></div>**`
+
+- error 가 있으면 ‘에러 발생’ 출력, 없으면 출력 x
+
+### value 값에 error 가 있을 때 처리
+
+### `<ul><li th:errors="*{id}" /><li th:errors="*{name}" /></ul>`
+
+- id 에 error 가 있으면 출력, name 에 error 가 있으면 출력
+
+### form 에서 url action
+
+### **`th:action=”URL”`**
+
+### form 에서 submit 시, form의 데이터가 th:object에 설정해준 객체로 던져짐
+
+### `th:object="${signUpForm}"`
+
+**SignUpForm 이라는 ‘객체’ 의 필드가 자동으로 매핑**된다.
+
+예를들어, SignUpForm 내부에 String id, String name 이라는 필드가 있을 경우,
+
+html form 에서 form 태그에 `th:object=”${signUpForm}` 으로 기재하고, 
+
+input 태그에 `th:field="*{id}"`, `th:field="*{name}"` 를 기재하면
+
+form submit 시에 자동으로 컨트롤러에서 매핑되어 객체로 인식한다.
+
+타임리프를 사용하지 않으면 input 태그에 `name=”id”` , `name=”name”`
+
+처럼 컨트롤러에서 받을 객체의 필드명을 모두 기재해줬어야 하지만,
+
+th:object 와 th:field 를 사용하면 그럴 필요가 없다.
+
+### form 에서 th:object 와 함께 사용하면 submit 시에 컨트롤러에서 자동매핑
+
+### `th:field="*{name}"`
+
+각각 필드들을 매핑을 해주는 역할을 한다. 
+
+설정해 준 값으로, th:object에 설정해 준 객체의 내부와 매칭해준다.
+
+위의 설명`th:object`을 참고하자.
+
+```html
+<form **th:action="@{/sign-up}"** **th:object="${signUpForm}"** method="post">
+    <div class="form-group">
+        <label for="nickname">닉네임</label>
+        <input id="nickname" type="text" **th:field="*{nickname}"** class="form-control">
+    </div>
+</form>
+```
+
+- **th:action="@{/sign-up}**
+    - **form submit 시에 “/sign-up” url로 전송**
+- **th:object="${signUpForm}"**
+    - **form submit 시에 SignUpForm 이라는 객체로 데이터가 자동 매핑됨**
+- **th:field=”*{nickname}”**
+    - **form submit 시에 SignUpForm 이라는 객체의 nickName 이라는 필드로 자동 매핑됨**
+
+### layout 중복제거
+
+### fragment로 header, footer, navBar 같은 모든 페이지에 중복되는 layout 제거
+
+### **th:fragment**
+
+header, footer, navigation bar 같이 모든 페이지에 보여져야하는 항목인 경우 
+
+따로 분리해서 관리한다.
+
+```html
+// fragments.html
+<head **th:fragment="head"**>
+    <meta charset="UTF-8">
+    <title>StudyOlle </title>
+    <link rel="stylesheet" href="/node_modules/bootstrap/dist/css/bootstrap.min.css"/>
+    <style>
+        .container {
+            max-width: 100%;
+        }
+    </style>
+</head>
+```
+
+**th:fragment=”head” 를 사용해 head 분리**하고, 공통 컴포넌트로 사용
+
+### replace 와 insert 로 분리해놓은 fragment 삽입하기
+
+### th:replace & th:insert
+
+얘들은 **fragment 랑 같이 쓰인다.**
+
+**replace 는 태그 전체를 바꿔준다.**
+
+head 태그 자체가 fragments.html의 head로 바뀐다.
+
+```html
+// index.html
+<head **th:replace**="fragments.html :: head"></head>
+```
+
+i**nsert 는 태그 내부에 삽입해준다.**
+
+div 태그 내부에 fragments.html의 content가 삽입된다.
+
+```html
+// index.html
+<div **th:insert**="fragments.html :: content">
+
+</div>
+```
+
+### `*{}` 표현식
+
+### th:object 의 필드 값을 일부만 표현하고 싶을 때 사용
+
+```html
+<div th:object="${session.user}"> <!-- 객체 명시 -->
+	<!-- ${}표현식에서 object를 쓰고 싶을 때 -->
+  <p>Name: <span th:text="**${#object.firstName}**">Sebastian</span>.</p> 
+
+	<!-- 원래 ${} 표현식 -->
+  <p>Surname: <span th:text="**${session.user.lastName}**">Pepper</span>.</p> 
+
+	<!-- *{} 표현식 -->
+  <p>Nationality: <span th:text="***{nationality}**">Saturn</span>.</p> 
+</div>
+```
+
+th:object 의 값 (session.user)의 nationality 를 출력하고 싶을 때 사용한다.
+
+session.user.nationality 로 쓰면 기니까 줄여 쓸 때 사용하는 것 같음.
+
+### `${#}`
+
+### th:object 의 값을 표현식에서 사용하고 싶을 때
+
+th:object 의 값(session.user)을 표현식으로 나타낼 때  **`${#object.firstName}`** 처럼 사용한다.
+
+${#객체명} 처럼 사용하지 않으면 **${session.user.lastName}** 으로 사용해야 한다.
+
+# ref
+
+---
+
+[https://velog.io/@max9106/Thymeleaf-자주-사용하는-문법](https://velog.io/@max9106/Thymeleaf-%EC%9E%90%EC%A3%BC-%EC%82%AC%EC%9A%A9%ED%95%98%EB%8A%94-%EB%AC%B8%EB%B2%95)
+
+[https://velog.io/@susu1991/Thymeleaf](https://velog.io/@susu1991/Thymeleaf)
