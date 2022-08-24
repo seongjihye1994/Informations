@@ -1,0 +1,21 @@
+### Javascript 객체를 객체 모양의 String 으로 변환함
+
+```jsx
+let Member = {
+		name: 'me',
+		age: 20,
+		address: '수원시',
+		other: null
+}
+
+let json = JSON.stringify(Member);
+
+console.log(typeof json); // String
+console.log(json);
+/*
+	"name": "me",
+	"age": 20,
+	"address": "수원시",
+	"other": null
+*/
+```
