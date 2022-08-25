@@ -1,0 +1,196 @@
+서버의 에러를 잡아서 처리해보자.
+
+서버 에러는 공통 로직이 매우 많다.
+
+이 에러가 나면, 이 메세지를 보여줘라~ 와 같이
+
+그래서 이 공통 로직을 하나의 클래스가 처리할 수 있도록 해보자.
+
+### Controller
+
+```java
+@RequestMapping("/drop")
+public ResponseEntity<Object> dropReplication(@NotNull @RequestBody ReplicationDropObjInfo dropReplObj) {
+    String replicationName = dropReplObj.getReplicationName();
+    String localUserName = dropReplObj.getLocalUserName();
+    List<String> localTableName = dropReplObj.getLocalTableName();
+
+		// *** 아래 3줄 DB 로직에서 에러가 발생하면 자동으로 @ExceptionHandler 이 잡아준다~
+    **// 해당 Replication 구동 상태 체크
+    checkReplStopStatusAndStopRepl(replicationName);
+
+    // 아니면 먼저 STOP 한 후 drop items 진행
+    replicationService.startDropItems(localTableName, replicationName, localUserName);
+
+    // 마지막엔 모두 start 진행
+    replicationService.startRepl(replicationName);**
+
+		// 정상 리턴
+    return ResponseEntity.ok().body("Replication Drop Items Success!");
+}
+```
+
+비즈니스 로직을 처리하는 컨트롤러이다.
+
+Replication 구동 상태를 체크하고, Stop 하고, Start 하는 로직은 모두 SQL Exception 을 발생시킬 수 있다.
+
+그래서 원래라면 try ~ catch 로 일일이 에러를 잡아줘야 했지만,
+
+@ExceptionHandler 를 사용하면 자동으로 해당 에러를 잡아 처리해준다!
+
+코드를 보자!
+
+### 전역에서 사용할 Global Exception Handler Controller
+
+```java
+package com.ipageon.AltibaseReplication.error;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.nio.charset.Charset;
+import java.sql.SQLException;
+
+**@ControllerAdvice // 전역에서 에러처리**
+@Slf4j
+public class GlobalExceptionHandler {
+
+    **@ExceptionHandler(SQLException.class) // SQL Exception 이 발생하면 아래 메소드 호출**
+    public ResponseEntity<ErrorDTO> sqlException(SQLException e) {
+        log.error(e.getMessage());
+
+				// 헤더 정의
+        HttpHeaders header = new HttpHeaders();
+        header.setContentType(new MediaType("application", "json", Charset.forName("UTF-8")));
+
+				// body 정의
+        ErrorDTO errorDTO = ErrorDTO.builder()
+                .status(StatusEnum.BAD_REQUEST)
+                .message(e.getMessage())
+                .build();
+
+				// 헤더, 바디, 응답상태 리턴
+        return new ResponseEntity<>(errorDTO, header, HttpStatus.BAD_REQUEST);
+    }
+}
+```
+
+**@ExceptionHandler(SQLException.class) 를 사용하면 위에서 말했듯이,**
+
+SQL Exception 이 발생하면 자동으로 밑에 정의된 메소드를 실행해서
+
+에러를 잡아준다!
+
+그리고 **@ControllerAdvice 는 전역에서 global 하게 모든 컨트롤러의 에러를 처리하도록 한다.**
+
+ResponseEntity 는 HttpStatus 의 헤더와 바디 그리고 응답 상태가 포함된 객체이다.
+
+<aside>
+🚀 **ResponseEntity : headers + bodys + response status**
+
+</aside>
+
+### 전역에서 사용할 Global Exception Handler Controller
+
+```java
+package com.ipageon.AltibaseReplication.error;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.nio.charset.Charset;
+import java.sql.SQLException;
+
+@ControllerAdvice // 전역에서 에러처리
+@Slf4j
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(SQLException.class) // SQL Exception 이 발생하면 아래 메소드 호출
+    public ResponseEntity<ErrorDTO> sqlException(SQLException e) {
+        log.error(e.getMessage());
+
+        HttpHeaders header = new HttpHeaders();
+        header.setContentType(new MediaType("application", "json", Charset.forName("UTF-8")));
+
+        ErrorDTO errorDTO = ErrorDTO.builder()
+                .status(StatusEnum.BAD_REQUEST)
+                .message(e.getMessage())
+                .build();
+
+        return new ResponseEntity<>(errorDTO, header, HttpStatus.BAD_REQUEST);
+
+    }
+}
+```
+
+ResponseEntity<> 의 스크립틀릿 내부는 ErrorDTO 를 기재했다.
+
+ResponseEntity 를 구성하는 바디를 DTO 형식으로 받아 처리하도록 했다.
+
+### ResponseEntity의 바디를 구성하는 ErrorDTO
+
+```java
+package com.ipageon.AltibaseReplication.error;
+
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class ErrorDTO {
+
+    private StatusEnum status;
+    private String message;
+}
+```
+
+@Builder 패턴을 사용해서 생성자를 자유롭게 사용하도록 정의했다.
+
+여기에 서버에서 클라이언트로 전달 할 데이터까지 적어줄 수 있다.
+
+이제 클라이언트에 뿌려주자!
+
+### index.html
+
+```jsx
+function addReplicationItem(url, selectObj) {
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(selectObj), // body의 데이터 유형은 반드시 "Content-Type" 헤더와 일치해야 함
+    }).then((response) => {
+        if (!response.ok) { // 응답이 ok가 아니면 response thorw
+            throw response;
+        }
+        response.text() // 응답이 ok 이면 text로 바꿔서 콘솔에 찍어주고, 화면에 렌더링
+            .then(msg => {
+                console.log(msg);
+                renderResult(`success`, msg, `closeAddModalBtn`);
+            }).catch(() => {
+            throw response;
+        });
+        return response;
+    }).catch((error) => { // 응답이 ok가 아니면 text로 바꿔서 콘솔에 찍어주고, 화면에 렌더링
+        error.json()
+            .then(msg => {
+                const status = msg.status;
+                **if (status === `BAD_REQUEST`) { // 여기서 포인트! 응답 상태에 따라 화면을 다르게 처리할 수 있음**
+                    const message = msg.message;
+                    renderResult(`error`, message, `closeAddModalBtn`);
+                }
+            });
+    });
+}
+```
