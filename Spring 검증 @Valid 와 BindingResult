@@ -1,0 +1,406 @@
+# Spring 검증 @Valid 와 **BindingResult**
+
+# 서버사이드 데이터 검증
+
+## @Valid 와 BindingResult
+
+Spring 서버측에서 데이터를 간단하게 검증하는 방법이 2가지가 있다.
+
+1. @Valid 어노테이션
+2. BindingResult
+
+먼저 @Valid 어노테이션부터 알아보자.
+
+### @Valid
+
+**@Valid는 객체에 들어가는 값을 검증해주는 어노테이션**이다.
+
+@Valid선언된객체에 **설정을 바탕**으로 검사후 BindingResult에 담아준다.
+
+에러를 발생하려면 FieldError객체를 만들어서 BindingResult에 넣어준다.
+
+**태그에서 object에 담긴 객체의 프로퍼티를 filed *{필드이름} 형식**으로 사용한다
+
+errors는 BindingResult에 있는 에러값을 출력해준다.
+
+BindingResult.hasErrors : 에러가 있는지 검사한다.
+
+값이 유효한지에 대한 체크는 로직 여러군데에서 사용하기 때문에
+
+에러처리 로직(트라이 캐치문) 만큼이나 중복이 많다.
+
+그래서!
+
+불필요한 검증 로직 중복을 제거하고자 @Valid 를 사용할 수 있다.
+
+이 **@Valid 를 사용하면, @Min, @Max, @NotNull 등의 어노테이션으로**
+
+**간단하게 값을 체크**할 수 있다!
+
+@Valid 를 사용하기 위해 디펜던시를 설정해보자.
+
+### @Valid 사용
+
+***hibernate-validator 추가하기***
+
+```xml
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-validator</artifactId>
+    <version>4.2.0.Final</version>
+</dependency>
+```
+
+위의 코드를 메이븐 디펜던시에 추가해주자.
+
+***검증할 DTO 객체 선언하기***
+
+```java
+@NoArgsConstructor
+@ToString
+public class UserInfo {
+
+     **@NotEmpty(message="name을 입력해주세요")**
+     private String  name;
+
+     **@NotEmpty(message="비밀번호를 입력해주세요")
+     @Size(min = 6, max=10, message = "길이가 알맞지 않습니다")**
+     private String  password;
+
+     **@Range(min = 1, max = 5)**
+     private int grade;
+}
+```
+
+회원가입을 위한 UserInfo 객체를 선언하고 
+
+각 필드에 데이터 검증을 위한 검증 어노테이션을 설정해보자.
+
+**@NotEmpty**
+
+- **null과 “”(공백) 은 비허용**
+- **“ ” (띄어쓰기)는 허용**
+    - name 필드에 띄어쓰기는 허용하지만, 공백이나 null은 허용하지 않음
+
+**@Size와 @Range**
+
+- **값이 지정한 범위내로 들어올 때만** 값을 넣어준다.
+    - password 필드는 최소 6자리부터 10자리까지만 허용한다.
+    - grade 필드는 최소 1자리부터 5자리까지만 허용한다.
+
+**@message**
+
+- **에러가 발생하면 @message 가 defaultError 로 설정된다.**
+    - 에러가 발생하면 @message 에 설정한 에러 메세지가 출력되게 된다.
+
+***비즈니스 로직 Controller 선언하기***
+
+```java
+@Controller
+public class UserController {
+
+   @RequestMapping(value="/joinForm",  method=RequestMethod.GET)
+   public String joinForm(){
+         return "join";
+   }    
+   
+   @RequestMapping(value="/join", method=RequestMethod.POST)
+   public String join(@**Validated UserInfo userInfo, BindingResult bindingResult**){
+
+        System.out.println("name: " + userInfo.getName());
+        System.out.println("pass: " + userInfo.getPassword());
+        System.out.println("error: " + **bindingResult.hasErrors()**);
+				**// bindingResult에 error가 있다면 출력
+         
+				// bindingResult에 error가 있다면 아래 로직을 실행**
+        if(**bindingResult.hasErrors()**){
+              List<ObjectError> list =  **bindingResult.getAllErrors(); // 에러를 꺼내서**
+
+              for(ObjectError e : list) {
+                   System.out.println(e.getDefaultMessage()); // 출력
+              }
+              return "join";
+         }
+
+         return "home";
+   }
+}
+```
+
+@**Validated 와 BindingResult로 뷰에서 전달된 파라미터 서버로 받기**
+
+view에 전달받은 값에 @Valid나 @Validated 어노테이션을 붙인다.
+
+- @Valid와 @Validated의 차이
+    
+    @Valid는 자바 표준 검증 어노테이션, @Validated는 스프링 전용 검증 어노테이션
+    
+
+**bindingResult로 에러 유무 체크하기**
+
+에러 체크는 hasErrors() 메소드를 사용한다.
+
+에러 리스트는 getAllErrors() 메소드로 가져온다.
+
+**@message 와 getDefaultMessage로 사용자가 지정한 메세지 출력하기**
+
+getDefaultMessage()함수로 defaultError 메시지를 가져올 수 있다.
+
+- 여기서 DTO 내부에 @message 를 사용했기 때문에 사용자가 설정한 메세지가 default로 출력된다.
+
+***Controller와 소통할 View 선언하기***
+
+```html
+<%@ page language="java" contentType="text/html; charset=EUC-KR"
+    pageEncoding="EUC-KR"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"  "http://www.w3.org/TR/html4/loose.dtd">
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;  charset=EUC-KR">
+<title>Insert title here</title>
+</head>
+<body>
+     **<form action="/join" method="post">
+           <label>이름:</label>
+           <input name="name" type="text" id="name">
+
+           <label>비밀번호:</label>
+           <input name="password" type="password"  id="password">
+
+           <input type="submit" value="전송">
+     </form>**
+</body>
+</html>
+```
+
+예제 코드에서는 JSP를 사용했다.
+
+body 태그 내부에 form 태그를 사용해 controller 로 데이터를 전달해보자.
+
+- html 태그의 name 속성을 객체명과 동일하게 지정해야 controller 에서 객체로 데이터를 받을 수 있음
+
+이렇게 @Valid를 사용할 수 있다. 
+
+### **BindingResult**
+
+Validator를 상속받는 클래스에서 객체값을 검증하는 방식이다.
+
+### **BindingResult 사용**
+
+***validation-api 추가하기***
+
+```xml
+<dependency>
+    <groupId>javax.validation</groupId>
+    <artifactId>validation-api</artifactId>
+    <version>2.0.1.Final</version>
+</dependency>
+```
+
+***검증할 DTO 객체 선언하기***
+
+```java
+@NoArgsConstructor
+@ToString
+public class UserInfo {
+
+     private String  name;
+
+     private String  password;
+}
+```
+
+BindingResult 는 @Valid 와 다르게 **검증 클래스를 별도로 만들거기 때문에**
+
+검증 대상인 DTO 객체에는 별도로 검증 어노테이션(@Min, @Max 등)을 사용하지 않는다~
+
+***검증을 책임질 validator 선언***
+
+```java
+package test.controller;
+
+**import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;**
+import test.VO.UserInfo;
+
+@NoArgsConstructor
+public class **UserInfoValidator implements Validator** {
+
+		 **// Validator 를 implements 하면서 메소드 오버라이딩**
+     @Override
+     public boolean supports(Class<?> clazz) {
+            return UserInfo.class.isAssignableFrom(clazz);
+     }
+
+		 **// Validator 를 implements 하면서 메소드 오버라이딩
+		 // validate 함수에서 값이 유효한지 체크!**
+     @Override
+     public void validate(**Object target, Errors errors**) {
+
+           UserInfo userInfo = (UserInfo) target;
+ 
+           String mName = userInfo.getName();
+
+           if(null == mName || mName.trim().isEmpty()) {
+                System.out.println("회원이름을 이름하세요");
+                **errors.rejectValue("name", "공백");**
+           }
+           
+           String password = userInfo.getPassword();
+
+           if(null == password || password.trim().isEmpty()) {
+                System.out.println("회원 비밀번호를 입력하세요");
+                **errors.rejectValue("password", "공백");**
+           }
+     }
+}
+```
+
+위에서도 말했듯이, 
+
+BindingResult는 검증 대상 객체인 DTO에다가 별도로 검증 어노테이션을 사용하지 않는다.
+
+검증을 책임질 validator 클래스를 별도로 만들거기 때문~
+
+***검증을 위한 Validator implements***
+
+Validator 를 implements 하면서 supports,  validate 메소드를 오버라이딩한다.
+
+***검증 대상 객체인 Target과 Error 객체***
+
+validate 함수에서 값이 유효한지 체크한다.
+
+- Object target
+    - 검증 대상 객체 (UserInfo)
+- Error error
+    - 에러를 핸들링하는 객체
+    - rejectValue()를 사용해 에러를 처리한다.
+
+***비즈니스 로직 Controller 선언하기***
+
+```java
+@Controller
+public class HomeController {
+     
+   @PostMapping(path = "/join")
+   public String join(**@Validated UserInfo userInfo,  BindingResult bindingResult**){
+
+        System.out.println("name : " + userInfo.getName());
+        System.out.println("pass : " + userInfo.getPassword());
+         
+        System.out.println("error : " + bindingResult.hasErrors());
+         
+         if(**bindingResult.hasErrors()**){
+              return "join";
+         }
+         
+         return "home";
+   }    
+   
+   
+   **@InitBinder**
+   protected void initBinder(WebDataBinder binder) {
+         binder.setValidator(new UserInfoValidator());
+   }
+}
+```
+
+뷰에서 넘겨준 데이터를 받을 Controller 이다.
+
+**검증 대상 객체인 UserInfo가 넘어올 때, BindingResult 객체도 값을 받는다.**
+
+- 이 때, 파라미터 받는 순서가 중요하다!
+    - **검증 대상 객체가 BindingResult보다 앞에 와야한다~~!~!**
+
+**bindingResult.hasErrors() 함수로 값이 알맞은지 체크**할 수 있다.
+
+**@InitBinder**
+
+특정 컨트롤러에서 바인딩 또는 검증 설정을 변경하고 싶을 때
+
+@InitBinder를 사용해 설정을 지정할 수 있음!
+
+```java
+ **@InitBinder**
+ protected void initBinder(WebDataBinder binder) {
+       **binder.setValidator(new UserInfoValidator());**
+ }
+```
+
+이 예제에서는 “join” url이 호출될 때 마다 InitBinder로 지정한 메소드가 호출되는데
+
+이 때, UserInfoValidator 객체를 생성한 후 해당 객체의 validate 함수를 호출해서
+
+값이 유효한지 체크하는 로직이다.
+
+아래는 InitBinder의 사용법임.
+
+```java
+@InitBinder
+public void initBinder(WebDataBinder binder) {
+		// 설정 부분 ...
+}
+```
+
+특정 모델 객체에만 적용하고 싶다면?
+
+```java
+@InitBinder("객체명")
+public void initBinder(WebDataBinder binder) {
+		// 설정 부분 ...
+}
+```
+
+객체명을 적어주면 된다.
+
+이외에도 여러 옵션들이 있다.
+
+```java
+ **@InitBinder**
+ protected void initBinder(WebDataBinder binder) {
+       binder.setDisallowedFields("필드명");
+ }
+```
+
+이렇게 setDisallowedFields 를 사용하면 해당 필드를 제외하고 바인딩을 한다.
+
+반대로, setAlloedFields 를 사용하면 해당 필드만 바인딩한다.
+
+***Controller와 소통할 View 선언하기***
+
+```html
+<%@ page language="java" contentType="text/html; charset=EUC-KR"
+    pageEncoding="EUC-KR"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"  "http://www.w3.org/TR/html4/loose.dtd">
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;  charset=EUC-KR">
+<title>Insert title here</title>
+</head>
+<body>
+     **<form action="/join" method="post">
+           <label>이름:</label>
+           <input name="name" type="text" id="name">
+
+           <label>비밀번호:</label>
+           <input name="password" type="password"  id="password">
+
+           <input type="submit" value="전송">
+     </form>**
+</body>
+</html>
+```
+
+이렇게 하면 바인딩 리절트를 사용할 수 있다.
+
+# ref
+
+---
+
+[https://heewon26.tistory.com/125](https://heewon26.tistory.com/125)
+
+[https://hooongs.tistory.com/111](https://hooongs.tistory.com/111)
+
+[https://parkwonhui.github.io/spring/2019/04/22/spring-valid-bindingresult.html](https://parkwonhui.github.io/spring/2019/04/22/spring-valid-bindingresult.html)
