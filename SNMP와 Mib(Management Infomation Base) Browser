@@ -1,0 +1,134 @@
+# SNMP와 Mib(Management Infomation Base) Browser
+
+[SNMP | VSFTP | SSH | ActiveMQ](https://www.notion.so/SNMP-VSFTP-SSH-ActiveMQ-eff09e0b773f460a9236751a34683756) 
+
+# SNMP
+
+Simple Network Management Protocol
+
+ 
+
+인터넷에 연결된 호스트(컴퓨터)를 정기적으로 **여러 관리 정보를 자동으로 수집하거나**
+
+**실시간으로 상태를 모니터링 및 설정**할 수 있는 서비스 
+
+OSI 7L에 속함.
+
+SNMP는 프로토콜일 뿐이며 이를 활용하여 실제 네트워크 관리정보를 얻기 위해서는 
+
+관련 프로그램이 준비되어야 한다.
+
+시스템이나 네트워크 관리자로 하여금 **원격으로 네트워크 장비를 모니터링하고 환경설정 등의 운영**을 할 수 있도록 하는 네트워크 관리 프로토콜
+
+관리를 편하게 해주지만,
+
+Dos나 버퍼 오버플로우, 비인가 접속 등과 같은 보안 문제에는 취약하다.
+
+관리 시스템을 Manager라고 하고, 관리 대상을 Agent 라고 부른다.
+
+SNMP Manager는 Agent에 필요한 정보를 요청하는 모듈이다.
+
+Agent는 관리 대상 시스템에 설치되어서 필요한 정보를 수집하고 Manager에게 전달해준다.
+
+관리 서버에 SNMP Agent 설치함 → 이 Agent 가 관리 서버를 점검하고 SNMP Manager에 보냄.
+
+사실상 주로 서버나 네트워크 장비에서 SNMP를 설정한 MRGT 라는 프로그램일 이용해서 트래픽을 관리하는데 사용됨.
+
+MRGT??
+
+멀티 라우터 트래픽 그래퍼의 약자.
+
+SNMP 로 통신하는 장비의 모니터링 프로그램이다.
+
+주 용도는 네트워크 트래픽 사용량 모니터링
+
+하지만 벤더에서 제공하는 SNMP MIB 값을 사용하여 다양한 정보를 수집함.
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/fdc76cfe-2752-4ee7-b95c-29d81a17f5eb/Untitled.png)
+
+매니저가 관리 시스템이고
+
+에이전트가 관리할 장비에 설치됨
+
+매니저가 에이전트한테 정보를 요청함
+
+에이전트가 관리 장비에 설치돼서 지속적으로 장비를 모니터링해서 매니저에게 전송
+
+- Manager : Agent에 필요한 정보를 요청하는 역할
+- Agent : Agent가 설치된 시스템의 정보나 네트워크 정보 등을 수집하여 MIB 형태로 보관, Manager에 전달해주는 역할 수행
+
+- SNMP 버전 : Manager와 Agent간 SNMP 버전이 일치해야 한다.
+
+# Mib
+
+**관리 되어야 할 특정한 정보, 자원을 객체라 하고 이러한 객체들을 모아놓은 집합체를 MIB**라 한다.
+
+즉 관리자가 조회하거나 설정할 수 있는 객체들의 데이터베이스이다. 
+
+MIB는 **객체별로 트리 형식의 구조**를 이룬다.
+
+# Mib(Management Infomation Base) Browser
+
+snmp 프로토콜을 활용한 모니터링 툴이다.
+
+IT 자원 관리에 사용되는 SNMP(Simple Network Management Protocol)은 
+
+MIB(Management Infomation Base)라고 불리는 **트리구조**의 데이터 형식을 통해서 
+
+NMS서버에서 필요한 정보를 관리 대상 클라이언트에게 **UDP로 요청**하여 
+
+값을 수신받아 저장/관리한다.
+
+# NMS(**Network Management System)** 란?
+
+**네트워크 관리 시스템**이라고 하며 컴퓨터 네트워크 또는 네트워크들을 모니터링하고 관리하는데 사용되는 하드웨어와 소프트웨어의 조합을 총칭한다.
+
+### **NMS의 5대 기능(FCAPS)**
+
+1. **결함 관리(Fault Management)** : **결함을 탐지**하고 사용자에게 알려 신속하게 결함을 해결하는 일
+2. **회계 관리(Accounting Management)** : 사용자의 **네트워크 자원의 사용비용**을 알려주고 측정하는 일
+3. **구성 관리(Configuration Managenet)** : 네트워크 통신망을 구성하고 있는 통신장비, 프로그램 등에 대해서 **위치 혹은 구성정보, 장치 수량 등을 파악**하여 관리하고 경우에 맞게 재구성하는 일
+4. **성능 관리(Performance Managenet)** : 네트워크 운용에 관한 통계의 수집 및 분석을 통하여 향후 수요 예측과 **네트워크 운용의 최적화** 등을 관리하는 일
+5. **보안 관리(Security Managenet)** : 통신망과 통신장비에 대한 **접근 제어와 보안 서비스** 등을 관리하는 일
+
+# OID
+
+OID(Object IDentifier)란 MIB 내에 포함되어 있는 각 개별 정보(Object)에 대한 ID
+
+장비의 개별 정보(Object)에 대한 ID
+
+라우터, 스위치, 서버, 워크스테이션, 프린터, 모뎀 랙처럼 네트워크를 구성할 수 있는 IT 인프라 장비는 **SNMP 프로토콜을 통해 정보를 주고 받게** 된다.
+
+이 때 주고 받는 **정보의 집합체를 MIB**(Management Infomation Base)이라고 부른다.
+
+MIB을 정보의 집함체라고 했는데, 예를 들면 **CPU 사용량, 메모리 사용량 같은 성능 정보나 포트의 UP/DOWN 같은 상태 정보 등이 MIB에 포함**되어 있다.
+
+**OID(Object IDentifier)란 MIB 내에 포함되어 있는 각 개별 정보(Object)에 대한 ID**이다. 
+
+위에서 예를 들었던 **CPU 사용량, 메모리 사용량, 포트 상태 등 각 정보에 대해 구분할 수 있는 ID**를 붙여주는 것.
+
+내기준 정리해보자면
+
+1. snmp는 하드웨어 장비 간 udp 기반으로 통신하는 프로토콜이고
+2. mib는 snmp(agent-manager) 프로토콜로 통신할 때 주고받는 데이터인데
+    
+    (대충 cpu 사용량, 메모리 사용량 같은 성능 정보, 포트의 링크업/링크다운 같은것)
+    
+    여기서 agent 는 스위치, manager 는 mib browser
+    
+3. 이 mib 을 눈으로 보고싶어서 사용하는 것이 mib browser 이고
+4. 이 밉브라우저에서 볼 수 있는 각종 mib 들을 식별해주는게 OID 이다.
+    
+    
+
+# ref
+
+---
+
+[https://gudgud.tistory.com/17](https://gudgud.tistory.com/17)
+
+[https://media-tech.tistory.com/m/33](https://media-tech.tistory.com/m/33)
+
+[https://itragdoll.tistory.com/43](https://itragdoll.tistory.com/43)
+
+[https://m.blog.naver.com/watch_all/221698867095](https://m.blog.naver.com/watch_all/221698867095)
