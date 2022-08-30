@@ -1,0 +1,351 @@
+# MSA 아키텍쳐와 이벤트소싱 & CQRS
+
+# MSA (Micro Service Architecture)
+
+> ***마이크로 서비스 아키텍쳐의 준말로, 대규모 애플리케이션을 각 기능별로 모듈화 하여 핵심 서비스를 잘게 쪼개어 개발함***
+> 
+
+MSA는 최근 가장 인기있는 엔터프라이즈 아키텍쳐 중 하나
+
+세계에서 기술 좀 쓴다? 는 날고 기는 회사들은 대부분 MSA 아키텍쳐를 도입해서 개발중이다.
+
+배달의 민족을 예로 들면, 
+
+가장 초기 개발에서는 루비 데이터베이스를 사용한 대규모 모놀로그 아키텍쳐였다면, 
+
+2016년을 들어서는 MSA 로 조금씩 마이그레이션을 시작했다고 함.
+
+최근?에는 모두 MSA 아키텍쳐를 사용중
+
+아래 영상 참고!
+
+[https://www.youtube.com/watch?v=BnS6343GTkY](https://www.youtube.com/watch?v=BnS6343GTkY)
+
+## MSA 아키텍쳐 예시
+
+- MSA 아키텍쳐
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/468da2b5-7a5d-4702-82f6-49930de2f07f/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/fd8aeef3-9fb1-4d24-92b6-5a9f9b993d7f/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/bb36be5a-6399-4df0-bdf9-3c0bec913943/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/d034f82b-0b77-486b-a827-75f0d01296c9/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/c04b48ef-034f-4636-b19b-fd9cf9c0b10a/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/59e5af5e-933f-4fe0-a42e-b35509aac278/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/f6ceed06-b74a-4894-a97a-889b2dd48b41/Untitled.png)
+    
+    ![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/bc765771-de6c-4f52-a1f5-020c185782e0/Untitled.png)
+    
+    [MSA 아키텍처.pdf](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/2790d8fd-7718-43e0-b224-0000ebcdb7d4/MSA_아키텍처.pdf)
+    
+
+## MSA는 왜 쓰는걸까?
+
+SPOF 로 인한 서비스 다운을 막기 위해서이다.
+
+즉, 하나의 기능이 마비되어 다른 기능을 사용할 수 없는 상황을 방지하기 위해서이다.
+
+# SPOF (Single Point Of Failure)
+
+단일 고장 점(single point of failure, SPOF)는 
+
+> ***시스템 구성 요소 중에서, 특정 서비스가 동작하지 않으면 전체 시스템이 중단되는 요소를 의미***
+> 
+
+이중화가 되어있지 않은 요소라면 SPOF일 가능성이 높겠쥬?
+
+장애 회복성을 위해서라도 SPOF가 없어야 한다.
+
+## SPOF 예시
+
+- 단일 서버
+    - 하나의 API 서버에 하나의 DB 서버를 사용하고 있는 상황
+    
+    ![https://blog.seongjun.kr/static/c24ad1d9dfaed148b1ee8f541eeaef2b/06066/2022-01-25-19-23-17.png](https://blog.seongjun.kr/static/c24ad1d9dfaed148b1ee8f541eeaef2b/06066/2022-01-25-19-23-17.png)
+    
+
+### API 서버에 장애가 난다면?
+
+![https://blog.seongjun.kr/static/464325d17358da049aa033e5f04ca039/0b3a5/2022-01-25-19-48-49.png](https://blog.seongjun.kr/static/464325d17358da049aa033e5f04ca039/0b3a5/2022-01-25-19-48-49.png)
+
+다른 시스템 요소들과 관계 없이 전체 시스템이 먹동된다.
+
+### ****DB 서버에 장애가 난다면?****
+
+![https://blog.seongjun.kr/static/fb21398daa2e162acc5b7db873ce77ff/06066/2022-01-25-19-49-04.png](https://blog.seongjun.kr/static/fb21398daa2e162acc5b7db873ce77ff/06066/2022-01-25-19-49-04.png)
+
+이 역시 SPOF이다.
+
+## ****Network의 Bandwidth 한계****
+
+![https://blog.seongjun.kr/static/89c8825b4e3433280a87344c0012ff09/663f3/2022-01-25-21-20-39.png](https://blog.seongjun.kr/static/89c8825b4e3433280a87344c0012ff09/663f3/2022-01-25-21-20-39.png)
+
+10G 스위치에 10Gbps 이상의 데이터가 전달된다면, 
+
+Capacity를 넘어가는 순간부터 패킷 드랍이 발생한다.
+
+👉 Switch도 이중화가 필요하다.
+
+## SPOF 방지
+
+- API 서버를 늘려보자! (이중화 해보자!)
+
+![https://blog.seongjun.kr/static/989f27a163b15ddc877fdfc8ac11aaa2/dc057/2022-01-25-19-47-11.png](https://blog.seongjun.kr/static/989f27a163b15ddc877fdfc8ac11aaa2/dc057/2022-01-25-19-47-11.png)
+
+API 서버 한 대에 에러가 나도 서비스가 가능하다.
+
+하지만 여전히 DB서버는 SPOF이다.
+
+DB서버 또한 이중화를 한다.
+
+![https://blog.seongjun.kr/static/2fb1aca0407d66249ae52b17e702a3f2/3be76/2022-01-25-21-02-56.png](https://blog.seongjun.kr/static/2fb1aca0407d66249ae52b17e702a3f2/3be76/2022-01-25-21-02-56.png)
+
+이 외에도 Switch, Route 등의 서버 외의 하드웨어 부분에 SPOF가 발생할 수 있다.
+
+이러한 SPOF의 방지와 서비스의 복원력에는 당연하게도 큰 비용이 뒤따른다.
+
+👉 서버 및 스토리지의 이중화
+
+# 이벤트 소싱
+
+> **데이터 저장 방법** 에 대한 것으로, 로직의 결과만을 저장하는 것이 아닌, ***순차적으로 발생하는 이벤트를 모두 저장***하는 방법
+> 
+
+일반적으로는 어떤 로직을 처리하고, 그 결과 값만을 저장한다.
+
+하지만 **이벤트 소싱은 순차적으로 발생하는 이벤트를 모두 저장**한다.
+
+예를 들어보자.
+
+## 모놀로그 방식
+
+```
+사용자가 온라인 서점에서 책을 주문한다.
+
+1번 책을 구매 하고 싶어 주문하려 한다.
+
+그런데, 2번 책도 같이 주문하고 싶어졌다.
+
+그래서 2번 책도 같이 주문하려 한다.
+
+그런데, 생각해보니 1번 책은 필요가 없을 것 같아 1번 책을 주문 목록에서 삭제했다.
+
+이후 최종적으로 주문하는 책은 2번이 된다.
+```
+
+![모놀로그 방식](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/fbf7e4a1-0f74-4fa8-8fc0-fb78d4cfad5b/Untitled.png)
+
+모놀로그 방식
+
+이렇게 **최종 데이터만 저장하는 방식이 일반적인 모놀로그 방식**이라면, 이벤트 소싱은 조금 다르다.
+
+## 이벤트 소싱 방식
+
+**이벤트 소싱은 주문 과정을 모두 저장**한다.
+
+즉, ***저장 단위가 최종 값이 아니라 이벤트***이다.
+
+같은 예시로, 
+
+```
+사용자가 온라인 서점에서 책을 주문한다.
+
+1번 책을 구매 하고 싶어 주문하려 한다.
+
+그런데, 2번 책도 같이 주문하고 싶어졌다.
+
+그래서 2번 책도 같이 주문하려 한다.
+
+그런데, 생각해보니 1번 책은 필요가 없을 것 같아 1번 책을 주문 목록에서 삭제했다.
+
+이후 최종적으로 주문하는 책은 2번이 된다.
+```
+
+여기서, 모놀로그 방식과 다른 점!
+
+이벤트 소싱은 이벤트 자체를 데이터로 저장한다고 했다.
+
+즉, “사용자가 1번 책을 추가하여 주문을 생성한다.” 와
+
+2번 책을 주문에 추가한다.” 와
+
+“1번 책을 주문에서 삭제한다.” 라는 이벤트 자체가 저장되는 방식이다.
+
+![이벤트 소싱 방식](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/7b90f5e1-1708-4f0c-82a1-5729e9f7e421/Untitled.png)
+
+이벤트 소싱 방식
+
+그래서 **이벤트 소싱에서는 UPDATE 또는 DELETE의 개념이 없다.**
+
+오직 INSERT만 있다.
+
+## 이벤트 소싱과 스냅샷
+
+그럼 결국 현재 시점의 최종 값을 알기 위해서는 어떻게 할까? 
+
+순차적으로 저장된 이벤트들을 재생하면 결국 현재 시점의 최종 값을 얻게 된다!
+
+그런데 만약, 사용자가 책을 1000000번 추가했다 삭제했다를 반복한다면 어떨까? 
+
+최종 값을 얻기 위해 1000000개의 이벤트를 재생해야겠죠.. 
+
+자연스럽게 최종 값을 얻기 위한 처리시간이 길어진다.
+
+그래서 스냅샷의 개념을 도입한다.
+
+***1000번째 이벤트가 발생할 때 스냅샷으로 저장해 두면*** 
+
+***결국 최종 값은 1001번째 이벤트부터 재생해서 얻을 수 있겠죠?***
+
+# CQRS 패턴
+
+CQRS(Command and Query Responsibility Segregation)는 
+
+> ***상태를 변경(CUD)하는 Command**와 **조회(R)를 담당하는 Query***를 
+Object 혹은 ***시스템 단위로 분리***시키는 것
+> 
+
+구분하는 이유는,
+
+우리가 DB로부터 데이터를 읽어오고 처리를 하게 되면
+
+이미 그 사이에 데이터가 변경이 되었을 가능성이 높다.
+
+CQRS는 이런 변경 가능성을 인정하고
+
+어차피 Read와 CUD 사이에는 delay가 존재할 수 있음을 인정하는 것이다.
+
+이를 통해서 R과 CUD를 구분함으로써 얻는 이점을 설명하는 것이 CQRS 패턴이다.
+
+### DB Read/Write 분리, 분산
+
+대부분의 서비스는 Read가 Write보다 대략 7:3 또는 8:2로 비율이 더 많은데
+
+이럴때 Read/Write DB를 분리하면 DB서버의 부하를 줄일 수 있다.
+
+- 참고로 서비스 병목의 가장 큰 관례는 DB에서 발생한다.
+
+## 이벤트 소싱이 CQRS패턴과 궁합이 좋은 이유
+
+👩‍🔧 “***2번 책만 주문한 사용자 리스트를 반환해 주세요!**”*
+
+만약 위와 같은 요청을 받았다면?
+
+이벤트 소싱 방법에서는 이벤트 자체를 저장하므로, 
+
+2번 책만 주문한 사용자 리스트를 반환하는 일이 오래 걸릴 것 같다…!
+
+그래서 CQRS는 이벤트 소싱과 궁합이 좋다고 한다.
+
+아래 그림을 보자.
+
+![https://mblogthumb-phinf.pstatic.net/MjAxOTAzMTVfMTgy/MDAxNTUyNjEyOTMzNjc1.LBvUFP4BzxGrTn7XOBrDSiWcRX6kheVsdhXkDO-mjGQg.cucZTWqlgezgeEVTC65-7BtuCvNbOSdgSOhICh3lG7Ig.PNG.rogman0/04.png?type=w800](https://mblogthumb-phinf.pstatic.net/MjAxOTAzMTVfMTgy/MDAxNTUyNjEyOTMzNjc1.LBvUFP4BzxGrTn7XOBrDSiWcRX6kheVsdhXkDO-mjGQg.cucZTWqlgezgeEVTC65-7BtuCvNbOSdgSOhICh3lG7Ig.PNG.rogman0/04.png?type=w800)
+
+마이크로 서비스에서 데이터 처리에 이점이 있다. 
+
+***특정 api 를 통해서만 데이터를 변경***할 수 있고, 
+
+***조회 pi 를 이용해서 데이터를 읽을 수 있도록 분리***한다.
+
+※ 읽기/쓰기 요청을 분리함으로 해서 성능을 개선할 수 있다.
+
+※ 데이터 이상을 동시에 쓰는 방식보다 더 쉽게 찾을 수 있다.
+
+※ 이벤트 소싱과 함께 사용되어 비동기 처리로 작업을 수행할 수 있다.
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/81c50b0d-e13a-4a2f-972f-c2807582fae0/Untitled.png)
+
+조회 API와 명령
+
+## 이벤트 소싱과 MSA의 연관성
+
+쇼핑몰이 커져 MSA로 마이그레이션 했다.
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/869eee62-b6b8-4bd3-8652-2ab07766be3c/Untitled.png)
+
+주문 서비스와 고객 정보 서비스를 별도로 만들고 서로 HTTP로 통신하도록 했다.
+
+근대 어느날 문제가 발생한다.
+
+“고객 A가 주문을 했는데, 주문 데이터가 안보입니다. 그런데 신용카드 사에서는 결제가 완료되었다고 데이터가 저장되어 있습니다.”
+
+부랴부랴 이슈를 해결하기 위해 데이터를 확인해본다.
+
+하지만 데이터가 너무 많다.
+
+결제 번호로 로그를 뒤져보고 이래저래 데이터를 찾아다닌다.
+
+그렇게 꼬박 이틀이 지나 로그는 찾았으나, 알 수 없는 원인으로 보고를 올린다.
+
+그리고 몇몇 데이터는 이미 3일이 지나 파일시스템에서 사라져버렸다.
+
+개발팀이 모여 이슈 리뷰 회의를 한다.
+
+해결 방법을 모색하기 위해서다.
+
+문제가 뭘까?
+
+**데이터 정합성이 깨졌다.**
+
+그런데 문제는 어디서 잘못됐는지를 모르겠다는 것이 문제이다.
+
+또한, 데이터가 너무 많아 분석하기가 너무 어렵다.
+
+한 번 상태가 변하고 난 후 이전 상태를 알 수 있는 방법이 없다.
+
+에러 상황이 재현되지 않는다.
+
+즉, MSA로 마이그레이션 한 후, 
+
+각각의 핵심 모듈이 별도로 DB를 바라보고 있는 상황에서 
+
+서비서 별로 데이터 씽크가 맞지 않았으며(정합성이 깨짐),
+
+모놀로그 형태로 최종 데이터를 저장하면서 
+
+어디서부터 문제가 발생했는지를 알 수 없다는 문제가 있다.
+
+이를 방지하기 위해 MSA 아키텍쳐를 도입할 때는 최종 데이터만 저장되는 것이 아닌,
+
+중간 과정인 이벤트 자체를 DB에 저장하는 방식을 사용하는 것이다.
+
+# 정리
+
+MSA를 사용하는 이유?
+
+하나의 서비스가 장애가 나도 다른 서비스는 이용 가능해야 하기 때문
+
+→ SPOF 방지를 위해
+
+MSA 아키텍쳐로 개발된 서비스의 장애를 대응하기 위해
+
+이벤트 소싱 방식을 적용
+
+중간에서 이벤트를 받는 서비스를 두고 각 서버들간에 연결성을 최소화한다.
+
+→ 하나의 서버가 장애가 발생하면 연결된 서버도 장애가 발생하기 때문에 이를 최소화 하기 위해
+
+이 이벤트를 받는 서버에 CUD를 하고, 
+
+해당 이벤트 서버에서 R을 통해 필요한 정보만 가지고 오도록 한다.
+
+→ CQRS 패턴
+
+# ref
+
+---
+
+[https://mjspring.medium.com/이벤트-소싱-event-sourcing-개념-50029f50f78c](https://mjspring.medium.com/%EC%9D%B4%EB%B2%A4%ED%8A%B8-%EC%86%8C%EC%8B%B1-event-sourcing-%EA%B0%9C%EB%85%90-50029f50f78c)
+
+[https://m.blog.naver.com/rogman0/221488686499](https://m.blog.naver.com/rogman0/221488686499)
+
+[https://blog.seongjun.kr/single-point-of-failure/](https://blog.seongjun.kr/single-point-of-failure/)
+
+[https://m.blog.naver.com/rogman0/221488686499](https://m.blog.naver.com/rogman0/221488686499)
+
+[https://www.youtube.com/watch?v=NJ2GxSIH00s&t=761s](https://www.youtube.com/watch?v=NJ2GxSIH00s&t=761s)
