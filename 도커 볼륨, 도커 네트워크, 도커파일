@@ -1,0 +1,719 @@
+# day3 - 도커 볼륨 + 도커 네트워크 + 도커파일
+
+### 도커 볼륨
+
+도커 컨테이너에 쓰여진 데이터는 컨테이너가 삭제되면 같이 사라짐
+
+근대 이 데이터가 컨테이너가 사라지더라도 남아있어야 하는 경우가 많단말임.
+
+그래서 컨테이너 내부의 데이터를 영구적으로 저장해야 한다.
+
+어떻게???
+
+도커가 이를 위해 두가지 옵션을 지원한다.
+
+1. docker volume
+2. bind mount
+
+근대 두번째 방식인 바인드 마운트는 볼륨 방식보다는 오래됐고, 기능도 제한적임.
+
+그래서 요즘은 볼륨을 많이 사용하는듯 하다.
+
+볼륨으로 컨테이너 내부의 데이터를 영구적으로 저장해보자.
+
+1. 볼륨 생성
+    
+    ```bash
+    docker volume create 볼륨이름
+    ```
+    
+
+1. 볼륨 조회
+    
+    ```bash
+    docker volume ls
+    ```
+    
+
+1. 볼륨 디테일 조회
+    
+    ```bash
+    docker volume inspect 볼륨이름
+    ```
+    
+
+1. 생성된 볼륨을 컨테이너에 마운트하기
+    
+    이 작업을 해줘야 컨테이너가 볼륨을 사용할 수 있다.
+    
+    아래처럼 마운트 ㄱㄱ
+    
+    ```bash
+    docker run **-v 볼륨이름**:/연결할컨테이너경로 --name one busybox touch /app/test/txt
+    ```
+    
+    이렇게 도커로 컨테이너를 실행할 때 -v 옵션을 사용하면 된다.
+    
+    컨테이너를 실행하면서 touch 로 파일을 만들었기 때문에 
+    
+    실행된 컨테이너 내부에도 해당 파일이 존재한다~
+    
+
+[https://www.daleseo.com/docker-volumes-bind-mounts/](https://www.daleseo.com/docker-volumes-bind-mounts/)
+
+아래는 
+
+바인드 마운트 실습
+
+```bash
+docker   run   -it   -v  /tmp/writedir:/dirw   -v   /tmp/readonly:/read_dir:ro
+```
+
+도커 컨테이너 실행 시
+
+외부의 /tmp/writedir 을 컨테이너 내부의 /dir rw (리드 라이트)로 바인드 마운트,
+
+read_dir 디렉토리는 ro(리드온리)로 볼륨 마운트
+
+```bash
+root@master:~# docker   run   -it   -v  /tmp/writedir:/dirw   -v   /tmp/readonly:/read_dir:ro   --name  vol1    centos
+
+[root@64bb20178ee7 /]# ls /dirw
+file1
+
+[root@64bb20178ee7 /]# ls /read_dir
+file2
+```
+
+```bash
+[root@64bb20178ee7 /]# echo so tired >> /dirw/file1
+[root@64bb20178ee7 /]# cat /dirw/file1
+writeable file
+so tired
+[root@64bb20178ee7 /]#
+[root@64bb20178ee7 /]# echo so tired >> /read_dir/file2
+bash: /read_dir/file2: Read-only file system
+```
+
+리드라이트 파일은 echo로 수정이 되지만,
+
+리드온리 파일은 echo로 수정이 안되는걸 알 수 있다.
+
+```bash
+docker container inspect vol1 | grep -A 20 Mounts
+```
+
+vol1 컨테이너의 디테일을 Mounts 글자를 찾아 그 아래부터 20줄 보여줘
+
+근대 이제 잘 안쓴다.
+
+이제는 볼륨 마운트를 가장 많이 사용함.
+
+9191:80
+
+9191 포트로 연결하면 컨테이너의 80포트로 연결~
+
+```bash
+docker   volume   create   myvol
+		->  docker   volume   ls  
+
+docker   run   -d   --name  www3   -v  myvol:/usr/share/nginx/html   -p  9191:80   nginx:1.12
+
+docker    cp   index.html   www3:/usr/share/nginx/html
+
+rmac  
+
+docker   run   -d   --name  www3   -v  myvol:/usr/share/nginx/html   -p  9191:80   nginx:1.14
+
+ls   /var/lib/docker/volumes/myvol/_data
+
+vi   /var/lib/docker/volumes/myvol/_data/index.html  →  해당 파일의 내용을 변경해주세요
+```
+
+볼륨 삭제
+
+```bash
+docker volume rm myvol
+```
+
+기존  VM 을 복제
+
+복제 완료후  nfs VM 만 부팅해서  hostname, ip 주소 변경
+
+hostnamectl    set-hostname   nfs
+
+hostname
+
+vi    /etc/netplan/00-installer-config.yaml   ->   :set  nu
+
+6행     - 192.168.137.102  로  수정
+
+@@  nfs컴  ->  nfs  server
+
+apt-get  -y   install   nfs-kernel-server   rpcbind
+
+mkdir   /nas
+
+chown  -R   no
+
+---
+
+docker   run   -it  --name  nfscon  -v  nfsvol:/nasvol    centos
+
+->   ls   /nasvol
+
+->   echo  아무글자입력   >   /nasvol/a.txt
+
+nfs 컴:   ll   /nas
+
+cp   /etc/passwd    /nas
+
+->   ls   /nasvol
+
+->  exit
+
+rmac
+
+docker   volume   rm   nfsvol
+
+-> docker   volume   ls
+
+### 도커 네트워크
+
+Docker 컨테이너(container)는 격리된 환경에서 돌아가기 때문에 
+
+기본적으로 다른 컨테이너와의 통신이 불가능
+
+하지만 여러 개의 컨테이너를 하나의 Docker 네트워크(network)에 연결시키면 
+
+서로 통신이 가능해진다.
+
+컨테이너와 물리 서버의 물리 네트워크 랜 카드를 연결해주는 도커 브릿지
+
+[https://www.daleseo.com/docker-networks/](https://www.daleseo.com/docker-networks/)
+
+[https://joont92.github.io/docker/network-구조/](https://joont92.github.io/docker/network-%EA%B5%AC%EC%A1%B0/)
+
+---
+
+### 실습
+
+**@@@@@@@@@@ Quiz (소요시간: 15~25분)**
+
+**volume name: dbfile**
+
+**사용자 정의 네트워크 이름: wordpress_net**
+
+**컨테이너 이름: mysqldb**
+
+**사용할 이미지: mysql**
+
+**dbfile volume 이 적용될 디렉토리: /var/lib/mysql**
+
+**컨테이너 환경변수**
+
+**MYSQL_ROOT_PASSWORD: rootpass**
+
+**MYSQL_DATABASE: wpdb**
+
+**MYSQL_USER: wordpress**
+
+**MYSQL_PASSWORD: wordpress**
+
+**컨테이너 이름: web**
+
+**컨테이너 이미지: wordpress**
+
+**컨테이너 port number: 80**
+
+**호스트의 접속할때의 port number: 8080**
+
+**컨테이너 환경변수**
+
+**WORDPRESS_DB_HOST: mysqldb**
+
+**WORDPRESS_DB_NAME: wpdb**
+
+**WORDPRESS_DB_USER: wordpress**
+
+**WORDPRESS_DB_PASSWORD: wordpress**
+
+순서
+
+볼륨 생성
+
+1. docker volume create dbfile
+    
+    → dbfile 이라는 볼륨 생성
+    
+    docker volume ls
+    
+
+사용자 정의 브릿지 네트워크 생성
+
+1. docker network create **wordpress_net**
+    
+    docker network ls
+    
+
+컨테이너 생성 (환경변수는 파일 만들어서 때려넣고 설정하자) 전 환경변수 파일 생성
+
+1. vi db.txt
+    
+    **MYSQL_ROOT_PASSWORD=rootpass**
+    
+    **MYSQL_DATABASE=wpdb**
+    
+    **MYSQL_USER=wordpress**
+    
+    **MYSQL_PASSWORD=wordpress**
+    
+
+컨테이너 생성 (볼륨 연결 + 네트워크 연결)
+
+1. docker run -d -it --name mysqldb -v dbfile:**/var/lib/mysql --network wordpress_net --env-file db.txt mysql**
+    
+    -v : **/var/lib/mysql 여기로** 볼륨 연결
+    
+    **--network : 사용자가 만든 wordpress_net 네트워크로 연결**
+    
+    **--env-file db.txt : 환경설정 파일은 db.txt로**
+    
+    docker ps
+    
+
+---
+
+이번에도 컨테이너를 생성하는데,
+
+이번에는 환경변수 설정을 파일로 하지 말고 -e 옵션으로 하나씩 환경변수를 설정해보자.
+
+컨테이너 실행
+
+1. docker run -d -it --name web --network wordpress_net -p 8080:80 
+    
+    -e WORDPRESS_DB_HOST=mysqldb 
+    
+    -e WORDPRESS_DB_NAME=wpdb 
+    
+    -e WORDPRESS_DB_USER=wordpress 
+    
+    -e WORDPRESS_DB_PASSWORD=wordpress 
+    
+    wordpress
+    
+
+컨테이너를 실행한다.
+
+--name web : 컨테이너 이름을 web 으로
+
+ --network wordpress_net : 네트워크를 사용자가 만든 wordpress_net 으로
+
+-p 8080:80 : 포트를 외부에서 8080 접속 시 컨테이너는 80 포트로 연결되게
+
+-e ~ : 컨테이너의 환경변수를 -e 옵션으로 주고,
+
+마지막 wordpress : 이미지는 wordpress 로
+
+해서 컨테이너를 실행한다.
+
+docker ps
+
+**웹브라우저 - [http://192.168.137.101:8080](http://192.168.137.101:8080) 에서 확인**
+
+---
+
+컨테이너 제거
+
+docker container rm -f $(docker ps -aq)
+
+컨테이너를 삭제한 후 다시 컨테이너를 run 해도 볼륨으로 컨테이너 내부의 데이터를 저장했기 때문에 워드프레스에서 내가 작성했던 글은 없어지지 않는다.
+
+[http://192.168.137.101:8080/2022/08/31/sjh-docker/](http://192.168.137.101:8080/2022/08/31/sjh-docker/)
+
+ 
+
+### 컨테이너 이미지 만들기 - dockerfile
+
+[dockerfile.tgz](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/89e71782-de5c-4157-91cc-629b57756e8a/dockerfile.tgz)
+
+수업 준비
+
+**mkdir   docker**
+
+**tar   -xvzf   dockerfile.tgz  -C  ~/docker**
+
+**ls   docker**
+
+1. 디렉토리 생성
+2. 해당 디렉토리 이동
+3. Dockerfile 생성
+4. Dockerfile build
+
+***Dockerfile_FROM***
+
+모든 도커 파일은
+
+FROM 으로 시작된다. ( 베이스 이미지! )
+
+FROM centos:latest
+
+**vi    Dockerfile**
+
+**FROM centos:latest    << 이렇게 수정한 후**
+
+**docker   build   -t  myimg:1.0    .**
+
+```bash
+root@master:~/docker# **docker build -t myimg:1.0 .    >> 도커 이미지 빌드!**
+
+Sending build context to Docker daemon  200.2kB
+Step 1/1 : **FROM** centos:latest
+ ---> 5d0da3dc9764
+**Successfully built 5d0da3dc9764
+Successfully tagged myimg:1.0**
+
+root@master:~/docker# docker image ls
+REPOSITORY   TAG       IMAGE ID       CREATED         SIZE
+mysql        latest    ff3b5098b416   8 hours ago     447MB
+wordpress    latest    a11fafff58cd   7 days ago      609MB
+nginx        latest    2b7d6430f78d   8 days ago      142MB
+httpd        latest    a981c8992512   8 days ago      145MB
+**myimg        1.0       5d0da3dc9764   11 months ago   231MB
+centos       latest    5d0da3dc9764   11 months ago   231MB**
+nginx        1.14      295c7be07902   3 years ago     109MB
+nginx        1.12      4037a5562b03   4 years ago     108MB
+```
+
+내가 만든 도커파일인 myimg 와 centos 의 이미지 아이디가 동일하다. → 완전히 동일한 이미지이다.
+
+참고로 -t 는 tag 의 약자로, 이름을 붙여주는 것이다.
+
+이렇게 하면 도커 파일이 생성된다!
+
+***Dockerfile_RUN***
+
+**vi  Dockerfile.1      << 아래 구문으로 편집하기**
+
+**FROM ubuntu                                              레이어1**
+
+**RUN apt-get update                                    레이어2**
+
+**RUN apt-get install -y -q nginx                                    레이어3**
+
+**COPY index.html /var/www/html/                                    레이어4**
+
+**CMD ["nginx", "-g", "daemon off; " ]                                    레이어5**
+
+편집 완료하고 나와서 아래 명령어 치기
+
+**docker   build   -t   myimg:2.0   -f  Dockerfile.1     .**
+
+(. 은 잊지말고 붙이자. 현재 디렉토리라는 의미이다.)
+
+이렇게 run 구문 하나당 레이어를 하나씩 만들기 때문에
+
+위의 도커파일 구문은 총 5개의 레이어가 만들어진다.
+
+다른 구문은 어쩔 수 없다 쳐도
+
+run 구문은 &&로 붙여서 명령을 줄 수 있기 때문에
+
+&& 으로 붙여 쓰자!
+
+→ 굳이 여러개의 레이어를 불필요하게 많이 만들 필요가 없기 때문!
+
+그래서 위의 구문을 아래처럼 4 레이어로 바꿔보자.
+
+**vi  Dockerfile.1               << 편집기 열어서**
+
+**FROM ubuntu                    << 레이어 1**
+
+**RUN apt-get update  &&  apt-get install -y -q nginx                    << 레이어 2**
+
+**COPY index.html /var/www/html/                    << 레이어 3**
+
+**CMD ["nginx", "-g", "daemon off; " ]                    << 레이어 4**
+
+**docker   build   -t   myimg:3.0    -f  Dockerfile.1   .**
+
+도커파일로 이미지 만들고
+
+**docker   image   ls**
+
+확인
+
+물론 or 도 된다 → ||
+
+Dockerfile 에서 사용되는 논리연산자.
+
+|| 는 앞에 연산이 실패하던 상관없이 뒤에 연산 진행하겠다이고,
+
+&& 는 앞에 연산이 성공해야 뒤 연산을 수행하겠다는 의미
+
+보통 거진 다 && 를 쓰긴 함
+
+**COPY index.html /var/www/html/**        
+
+→ index.html 파일을 컨테이너의 /var/www/html/ 폴더 하위에 카피해서 넣겠다는 의미
+
+**CMD 와 엔트리 포인트는 동일하다.**
+
+이건 뭐냐?
+
+**컨테이너 실행했을 때 pid 1번을 지정하는 명령어**이다.
+
+cmd 는 컨테이너 실행 시 유저에 의해 pid 1번이 바뀔 수 있다는 것을 의미함.
+
+엔트리포인트는 컨테이너 실행 시 pid 1번을 바꿀 수 없도록 이미지를 만드는거임
+
+그래서 유저가 pid 1번을 수정할 수 없음
+
+cat Dockerfile.3
+
+```bash
+FROM centos
+
+**ENTRYPOINT ["/bin/ping", "localhost" ]
+CMD ["-c","3" ]**
+```
+
+위의 도커 파일을 보자.
+
+엔트리 포인트로 설정한 /bin/ping 을 로컬호스트에다가 실행하겠다는 pid 1번은
+
+유저가 수정할 수 없지만
+
+CMD에 설정한 ping 횟수 3은 수정할 수 있다!
+
+아래에서 확인해보자.
+
+```bash
+docker build -t myping -f Dockerfile.3 .                 << 도커 이미지 만들고
+
+docker run --name testping myping                        << 컨테이너 실행
+
+docker run --name testping2 myping -c 7                  << 유저가 핑 테스트를 7로 수정!
+```
+
+결과
+
+```bash
+PING localhost (127.0.0.1) 56(84) bytes of data.
+64 bytes from localhost (127.0.0.1): icmp_seq=1 ttl=64 time=0.015 ms
+64 bytes from localhost (127.0.0.1): icmp_seq=2 ttl=64 time=0.021 ms
+64 bytes from localhost (127.0.0.1): icmp_seq=3 ttl=64 time=0.022 ms
+64 bytes from localhost (127.0.0.1): icmp_seq=4 ttl=64 time=0.057 ms
+64 bytes from localhost (127.0.0.1): icmp_seq=5 ttl=64 time=0.058 ms
+64 bytes from localhost (127.0.0.1): icmp_seq=6 ttl=64 time=0.064 ms
+64 bytes from localhost (127.0.0.1): icmp_seq=7 ttl=64 time=0.020 ms
+```
+
+도커파일에서 CMD에 핑 테스트를 3으로 줬지만
+
+CMD는 사용자가 수정할 수 있기 때문에 ping 테스트를 7로 줬고
+
+실행도 잘 된다.
+
+***Dockerfile ONBUILD*** 
+
+```bash
+cat Dockerfile.4
+
+**FROM ubuntu
+RUN apt-get -y update && apt-get -y upgrade  && apt-get install -y nginx
+EXPOSE 80                                                                -> 포트설정
+ONBUILD ADD webdata.tar  /var/www/html/
+CMD ["nginx", "-g", "daemon off; " ]**
+```
+
+***ONBUILD ??***
+
+이 온빌드는 도커파일에 의해 이미지가 빌드 될 때 이 구문이 사용되는 것이 아니다.
+
+이 구문은 **도커 파일에 의해 이미지가 빌드될 때 그 빌드된 이미지를 다른 도커파일이 사용할 때 그 때** 이 구문의 효력이 발생한다.
+
+뮤슨 말이얌 ㅠ
+
+도커 파일에 의해 컨테이너 이미지가 생성(build)될 때
+
+온빌드는 실행 x
+
+**도커파일에 의해 생성된 컨테이너 이미지가** 
+
+**다른 도커파일의 FROM 구문 뒤에!! (베이스 이미지 지정)**
+
+**이 때 온 빌드 구문이 적용된다.**
+
+ 
+
+***Dockerfile HEALTHCHECK***
+
+해당 컨테이너의 이상을 감지하는 헬스체크 옵션
+
+```bash
+FROM ubuntu
+RUN apt-get -y update && apt-get -y install nginx  curl
+EXPOSE 80
+COPY index.html /var/www/html/
+**HEALTHCHECK  --interval=30s --timeout=3s CMD curl -f http://localhost/index.html  || exit 1**
+CMD ["nginx", "-g", "daemon off ;" ]
+```
+
+***Dockerfile 변수선언***
+
+- ARG 변수명=값
+    - ARG 는 도커파일 안에서 사용할 변수 선언
+- ENV 변수명=값
+    - ENV 는 컨테이너 안에서 사용할 변수 선언
+
+```bash
+FROM centos:7
+### ENV myName “Yu Mi”
+# ENV myOrder Pizza Pasta Salad
+# ENV myNumber 1004
+#
+**ENV myName="Yu Mi" \
+    myOrder=Pizza\ Pasta\ Salad \
+    myNumber=1004**
+
+#CMD ["/bin/bash"]
+```
+
+***Dockerfile WORKDIR*** 
+
+컨테이너 런 하고난 후 가장 처음 디렉토리를 /Hello/world/everyone 으로 설정할 수 있음
+
+```bash
+FROM centos:7
+WORKDIR /Hello
+WORKDIR world
+WORKDIR everyone
+
+RUN ["pwd"]
+```
+
+```bash
+root@master:~/docker# docker  build  -t  myimg:6.0   -f  Dockerfile.8     .
+Sending build context to Docker daemon  201.2kB
+Step 1/5 : FROM centos:7
+ ---> eeb6ee3f44bd
+Step 2/5 : WORKDIR /Hello
+ ---> Running in 33bbfbdf9a55
+Removing intermediate container 33bbfbdf9a55
+ ---> 9c77752d18e4
+Step 3/5 : WORKDIR world
+ ---> Running in b48e7a8de35d
+Removing intermediate container b48e7a8de35d
+ ---> 55f59dc0a51d
+Step 4/5 : WORKDIR everyone
+ ---> Running in a84db9b5946d
+Removing intermediate container a84db9b5946d
+ ---> 18663fda8e77
+**Step 5/5 : RUN ["pwd"]**
+ ---> Running in c51797a74dcf
+/Hello/world/everyone
+Removing intermediate container c51797a74dcf
+ ---> 447b9d2b6b2e
+Successfully built 447b9d2b6b2e
+Successfully tagged myimg:6.0
+root@master:~/docker# docker run -it myimg:6.0
+[root@6ebe72709b3a everyone]**# pwd
+/Hello/world/everyone**
+```
+
+***Dockerfile whoami***
+
+su 명령어와 비슷한 명령어
+
+지정한 계정을 추가하고 그 계정으로 로그인
+
+도커파일
+
+```bash
+FROM centos:7
+RUN ["useradd" , "sysadmin"]
+RUN ["whoami"]
+USER sysadmin
+RUN ["whoami"]
+```
+
+위의 도커파일을 실행해보자.
+
+```bash
+docker build -t myimg:7.0 -f Dockerfile.9 .
+```
+
+Dockerfile.9 를 -f : 실행한다.
+
+myimg 라는 태그로 버전은 7.0
+
+. : 현재 디랙토리에 있는 도커파일을
+
+***Dockerfile LABEL***
+
+LABEL 명령은 **이미지의 버전 정보, 작성자, 코멘트와 같이** 
+
+**이미지 상세 정보를 작성**해두기 위한 명령어
+
+아래와 같이 사용이 가능 하고
+
+docker image inspect --format="{{ .Config.Lables }}" [이미지명] 으로 확인가능
+
+```bash
+FROM centos:7
+#LABEL maintainer "Yu Mi <yumi@example.com>"
+#LABEL title "TEST Image"
+#LABEL version 1.0
+#LABEL description "This image is test image ^__^"
+
+**LABEL** maintainer "Yu Mi <yumi@example.com>" \
+      title "TEST Image" \
+      version 1.0 \
+      description "This image is test image ^__^"
+```
+
+**docker   image  inspect   nginx  |  grep   -A  3  Labels**
+
+**	->  docker   build   -t  myimg:8.0   -f  Dockerfile.10   .**
+
+**	->  docker  image  inspect   myimg:8.0   |  grep   -A  12  Labels**
+
+***Dockerfile EXPOSE***
+
+컨테이너의 포트를 설정함
+
+```bash
+FROM nginx
+EXPOSE 443
+```
+
+docker   build  -t  myimg:9.0   -f  Dockerfile.11   .
+
+docker image inspect myimg:9.0 | grep -A 4 Exposed
+
+```bash
+"ExposedPorts": {
+                "443/tcp": {},
+                "80/tcp": {}
+            },
+            "Tty": false,
+--
+            "ExposedPorts": {
+                "443/tcp": {},
+                "80/tcp": {}
+            },
+            "Tty": false,
+```
+
+```bash
+docker run -d --name testweb -p 9292:443 myimg:9.0
+```
+
+```bash
+# docker ps
+CONTAINER ID   IMAGE       COMMAND                  CREATED          STATUS          PORTS                                             NAMES
+11f24610bc35   myimg:9.0   "/docker-entrypoint.…"   20 seconds ago   Up 19 seconds   80/tcp, **0.0.0.0:9292->443/tcp**, :::9292->443/tcp   testweb
+```
+
+9292 포트를 443 포트로 포트포워딩 하도록 설정했다.
