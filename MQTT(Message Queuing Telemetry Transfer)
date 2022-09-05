@@ -1,0 +1,228 @@
+MQTT(Message Queuing Telemetry Transfer) 클라이언트를 구성하고 토픽에 대한 메시지 페이로드를 송/수신 (pub/sub) 해보자.
+
+## 의존성
+
+- Gradle
+
+```java
+implementation 'org.springframework.boot:spring-boot-starter-integration'
+implementation 'org.springframework.integration:spring-integration-mqtt'
+```
+
+- Maven (사내 기준)
+
+```xml
+<dependency>
+  <groupId>org.springframework.integration</groupId>
+  <artifactId>spring-integration-mqtt</artifactId>
+  <version>5.5.12</version>
+</dependency>
+```
+
+스프링 MQTT는 [Eclipse Paho MQTT Client](https://www.eclipse.org/paho/) 라이브러리를 사용한다.
+
+→ `org.springframework.integration`
+
+## Inbound Channel Config (Sub)
+
+토픽 메시지 구독을 위한 인바운드 채널 구성은 스프링이 제공하는 **`MqttPahoMessageDrivenChannelAdapter`** 구현체(클래스)를 통해 가능하다.
+
+### ****DefaultMqttPahoClientFactory****
+
+기본적으로 **DefaultMqttPahoClientFactory 를 사용해서 MQTT 클라이언트를 등록**한다.
+
+MQTT 클라이언트를 등록하려면 **MQTT 연결 정보(MqttConnectOptions)**를 설정한 **DefaultMqttPahoClientFactory** 를 빈으로 등록한다.
+
+```java
+package com.ipageon.nems.agent.neaswitch.config.mqtt;
+
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.integration.annotation.Gateway;
+import org.springframework.integration.annotation.MessagingGateway;
+import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
+import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
+import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+
+@Configuration
+@Slf4j
+public class MQTTConfig {
+
+	**// 브로커 연결 정보**
+  @Value("${mqtt.url}") // tcp://172.17.8.19:1883
+  private String BROKER_URL;
+  private final String MQTT_CLIENT_ID = MqttAsyncClient.generateClientId();
+
+  @Bean // 빈 수동 등록
+  public MqttPahoClientFactory mqttClientFactory() {
+    log.info("mqttClientFactory");
+
+    **// 1. mqtt 클라이언트 등록
+    DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();**
+
+    **// 2. mqtt 연결 정보 설정을 위한 객체 생성
+    MqttConnectOptions options = new MqttConnectOptions();
+    options.setServerURIs(new String[]{BROKER_URL}); // mqtt 브로커 url 등록**
+
+    **// 3. mqtt 클라이언트에 mqtt 연결 정보 설정 등록
+    factory.setConnectionOptions(options);**
+
+    return factory; // mqtt 클라이언트를 빈으로 등록 - 빈 수동 등록
+  }
+}
+```
+
+### ****MqttPahoMessageDrivenChannelAdapter 로 sub 채널 구성****
+
+앞서 등록했던 MQTT 클라이언트를 통해 메세지를 구독하기 위해 **`MqttPahoMessageDrivenChannelAdapter`**를 통해 메시지 수신을 위한 채널을 구성한다.
+
+```java
+@Configuration
+public class MqttConfig {
+
+    private static final String BROKER_URL = "tcp://localhost:1883";
+    private static final String MQTT_CLIENT_ID = MqttAsyncClient.generateClientId();
+    private static final String TOPIC_FILTER = "[PROTECT]";
+
+    @Bean
+    public MessageChannel mqttInputChannel() {
+        return new DirectChannel();
+    }
+
+		**// sub 채널 구성하기**
+    **@Bean
+    public MessageProducer inboundChannel() {
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(BROKER_URL, MQTT_CLIENT_ID, TOPIC_FILTER);
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.setOutputChannel(mqttInputChannel());
+        return adapter;
+    }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttInputChannel")
+    public MessageHandler inboundMessageHandler() {
+        return message -> {
+            String topic = (String) message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC);
+            System.out.println("Topic:" + topic);
+            System.out.println("Payload" + message.getPayload());
+        };
+    }**
+}
+```
+
+참고로 사내 스위치는 sub은 하지 않고 pub 만 하기 때문에 
+
+**`MqttPahoMessageDrivenChannelAdapter`** 를 구현하지 않았다.
+
+그래서 예시를 들고왔다.
+
+이제 MQTT 클라이언트에 의해 수신된 페이로드는 
+
+MQTT 클라이언트 ➤ Inbound Channel ➤ MessageChannel ➤ MessageHandler 순으로 이동
+
+되어 MessageHandler를 통해 수신된 페이로드를 확인할 수 있다.
+
+## Inbound Channel Config (pub)
+
+### ****MqttPahoMessageHandler 로 pub 채널 구성****
+
+MQTT 클라이언트는 이미 구성되었으므로, ****MqttPahoMessageHandler**** 를 사용해 메세지 발행 채널을 구성한다.
+
+```java
+package com.ipageon.nems.agent.neaswitch.config.mqtt;
+
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.integration.annotation.Gateway;
+import org.springframework.integration.annotation.MessagingGateway;
+import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
+import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
+import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+
+@Configuration
+@Slf4j
+public class MQTTConfig {
+
+  @Value("${mqtt.url}")
+  private String BROKER_URL;
+  private final String MQTT_CLIENT_ID = MqttAsyncClient.generateClientId();
+
+  @Bean
+  public MqttPahoClientFactory mqttClientFactory() {
+    log.info("mqttClientFactory");
+
+    // 1. mqtt 클라이언트 등록
+    DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
+
+    // 2. mqtt 연결정보 설정을 위한 객체 생성
+    MqttConnectOptions options = new MqttConnectOptions();
+    options.setServerURIs(new String[]{BROKER_URL}); // mqtt 브로커 url 등록
+
+    // 3. mqtt 클라이언트에 mqtt 연결 정보 설정 등록
+    factory.setConnectionOptions(options);
+
+    return factory; // mqtt 클라이언트를 빈으로 등록
+  }
+
+ **/**
+   * MqttPahoMessageHandler 로 MQTT 발행(pub)을 위한 채널 구성
+   * 구독 (sub)은 MqttPahoMessageDrivenChannelAdapter 사용
+   *
+   * @return
+   */
+  @Bean
+  @ServiceActivator(inputChannel = "mqttOutboundChannel")
+  public MessageHandler mqttOutbound() {
+    log.info("mqttOutbound");
+
+    MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler("testClient", mqttClientFactory());
+    messageHandler.setAsync(true);
+    messageHandler.setDefaultTopic("testTopic");
+
+    return messageHandler;
+  }**
+
+  @Bean
+  public MessageChannel mqttOutboundChannel() {
+    log.info("mqttOutboundChannel");
+    return new DirectChannel();
+  }
+
+  **/**
+   * @MessagingGateway 어노테이션을 선언한 메시지 게이트웨이 API를 통해 메시지를 발송
+   */
+  @MessagingGateway(defaultRequestChannel = "mqttOutboundChannel") // 데이터를 전송하는 게이트웨이
+  public interface MyGateway {
+
+    @Gateway
+    void sendToMqtt(Message data); // 메세지 전송
+  }**
+}
+```
+
+# ref
+
+---
+
+[https://kdevkr.github.io/spring-boot-integration-mqtt/](https://kdevkr.github.io/spring-boot-integration-mqtt/)
