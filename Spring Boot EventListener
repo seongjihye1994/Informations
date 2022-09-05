@@ -1,0 +1,29 @@
+# Spring Boot EventListener
+
+## 스프링 이벤트 리스너 사용
+
+이벤트는 여러가지가 있다.
+
+ApplicationContext를 만들었을 때, 구동됐을 때, 시작했을 때
+
+등등 여러 이벤트가 있다.
+
+가장 자주 사용하는 3가지 리스너를 알아보자.
+
+### ServletWebServerInitializedEvent
+
+ServletWebServerInitializedEvent는 웹서버가 초기화, 생성이 되면 호출되는 eventListener이다.
+
+### ApplicationStartingEvent
+
+환경 또는 ApplicationContext가 사용 가능하기 전이나 ApplicationListener가 등록된 후 SpringApplication이 시작되자마자 발생하는 이벤트
+
+### ApplicationStartedEvent
+
+응용 프로그램 컨텍스트가 새로 고쳐지지만 응용 프로그램 및 명령 줄 러너가 호출되기 전에 게시된 이벤트
+
+# ref
+
+---
+
+[https://steady-hello.tistory.com/32](https://steady-hello.tistory.com/32)
