@@ -1,0 +1,180 @@
+# SNMP4j
+
+## SNMP
+
+Simple Newtork Management Protocol (간의 망 관리 프로그램) 약자로
+
+네트워크 장비를 관리 감시하기 위한 목적이다.
+
+쉽게 말해 **네트워크에 있는 장비들을 관리하기 위한 프로토콜**
+
+UDP 상에 정의된 응용 계층 표준 프로토콜임.
+
+일반적으로 서버 / 네트워크 장비 / SNMP 설정이 가능한 장비들에 **SNMP를 설정**하면 
+
+SNMP서버에서 그 장비들에 대한 **정보(CPU 사용률, 포트 UP/Down , Memory사용률 등등)를** 
+
+**수집**하여 **NMS나 SMS 같은 프로그램에서 표출/관리**하기 위해 사용하는 거라고 보면 되겠다.
+
+**MIB / OID 값을 가지고 정보를 수집**한다.
+
+## SNMP 기능
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/eac51f58-b4bf-454f-8296-cb9973ff7ea3/Untitled.png)
+
+1. GET
+    1. SNMP 스테이션이 Agent의 오브젝트 값 검색
+2. SET
+    1. SNMP 스테이션이 Agent의 오브젝트 값 설정
+3. TRAP
+    1. Agent가 SNMP 스테이션에 중요한 사건 알림
+
+## SNMP Version
+
+- SNMPv1
+    - 3개 커뮤니티로 구성 (Read-Only, Read-Write, Trap)
+- SNMPv2
+    - 커뮤니티 문자 기반, SNMPv2c로 불림
+- SNMPv3
+    - Proposed Standard, 강력한 인증 및 관리 대상들끼리 private 통신
+
+## SNMP 기본 구성 요소
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/e68fa844-5751-4623-8d1a-de065dd26e84/Untitled.png)
+
+- SNMP 관리자 (SNMP Manager)
+    - NMS 프로그램을 의미함
+    - 에이전트에 쿼리를 전송하고 쿼리에 대한 응답을 수신하고 MIB를 조작하거나 네트워크 장치의 이벤트를 인식한다.
+- 관리 장치 (Managed Device)
+    - 관리 할 네트워크 장치
+- SNMP 에이전트 (SNMP Agent)
+    - 관리 정보를 수집하고 관리자에게 받은 쿼리에 대해 응답하고 네트워크 장치의 이벤트를 전송한다.
+- MIB (Management Information Base)
+    - 관리 장치에 대한 정보가 집합되어 있는 데이터베이스
+
+## SNMP get 코드
+
+```java
+package com.ipageon.nems.agent.neaswitch.service;
+
+import com.ipageon.nems.agent.neaswitch.dto.SwitchInfoDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.snmp4j.CommunityTarget;
+import org.snmp4j.PDU;
+import org.snmp4j.Snmp;
+import org.snmp4j.event.ResponseEvent;
+import org.snmp4j.mp.SnmpConstants;
+import org.snmp4j.smi.OID;
+import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.VariableBinding;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.List;
+import java.util.Vector;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class SnmpServiceImpl implements SnmpService {
+
+    private CommunityTarget target;
+
+    @Override
+    public void snmpGet(String tag, OID oid, int repeat, List<SwitchInfoDTO> switchInfoList) throws IOException {
+
+        // TODO 1. make Protocol Data Unit (PDU)
+        PDU pdu = getPdu(oid, repeat);
+
+        // TODO 2. make SNMP Message
+        Snmp snmp = new Snmp(new DefaultUdpTransportMapping());
+
+        // TODO 3. make target
+        makeTarget(pdu, snmp, switchInfoList);
+
+        snmp.close();
+    }
+
+    private PDU getPdu(OID oid, int repeat) {
+
+        PDU pdu = new PDU();
+
+        pdu.add(new VariableBinding(oid));
+        pdu.setType(PDU.GETBULK);
+        pdu.setMaxRepetitions(repeat);
+
+        return pdu;
+    }
+
+    private void makeTarget(PDU pdu, Snmp snmp, List<SwitchInfoDTO> switchInfoList) throws IOException {
+
+        target = new CommunityTarget();
+
+        UdpAddress targetAddress = new UdpAddress();
+
+        String snmpIp = null;
+        int snmpPort = 0;
+        String community = null;
+
+        // IP & PORT & SNMP Version Setting
+        for (SwitchInfoDTO switchInfo : switchInfoList) {
+            snmpIp = switchInfo.getSnmpIp();
+            snmpPort = switchInfo.getSnmpPort();
+            community = switchInfo.getCommunity();
+
+            targetAddress.setInetAddress(InetAddress.getByName(snmpIp));
+            targetAddress.setPort(snmpPort);
+
+            target.setAddress(targetAddress);
+            target.setCommunity(new OctetString(community));
+            target.setVersion(SnmpConstants.version2c);
+
+            System.out.println("::::::::::::::::: target = " + target);
+
+            // TODO 4. send Message and receive Response
+            sendMsgAndReceiveResponse(pdu, snmp);
+        }
+
+    }
+
+    private void sendMsgAndReceiveResponse(PDU pdu, Snmp snmp) throws IOException {
+
+        snmp.listen();
+
+        ResponseEvent response = snmp.send(pdu, target);
+        log.info("response.peerAddress = {}", response.getPeerAddress());
+
+        if (response.getResponse() == null) {
+            // TODO 5. response 가 null 이면 snmp not connected 알람 발송
+            log.error("Error: response is null.");
+
+        } else {
+            Vector variableBindings = response.getResponse().getVariableBindings();
+
+            for (Object variableBinding : variableBindings) {
+                System.out.println("variableBinding = " + variableBinding);
+            }
+
+        }
+    }
+
+}
+```
+
+# ref
+
+---
+
+[http://techdive.in/snmp/snmp4j-snmp-get-example](http://techdive.in/snmp/snmp4j-snmp-get-example)
+
+[https://technet.tmaxsoft.com/upload/download/online/jeus/pver-20150722-000001/snmp/chapter_JEUS_SNMP_Programming.html](https://technet.tmaxsoft.com/upload/download/online/jeus/pver-20150722-000001/snmp/chapter_JEUS_SNMP_Programming.html)
+
+[https://shj7242.github.io/2018/05/31/Spring39/](https://shj7242.github.io/2018/05/31/Spring39/)
+
+[https://m.blog.naver.com/koromoon/120183340921](https://m.blog.naver.com/koromoon/120183340921)
+
+[https://ja-gamma.tistory.com/entry/SNMP-개념동작원리](https://ja-gamma.tistory.com/entry/SNMP-%EA%B0%9C%EB%85%90%EB%8F%99%EC%9E%91%EC%9B%90%EB%A6%AC)
