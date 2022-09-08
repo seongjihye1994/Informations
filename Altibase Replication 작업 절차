@@ -1,0 +1,208 @@
+# Altibase Replication 작업 절차
+
+## 첨부파일
+
+[ALTIBASE_이중화환경의DDL_가이드.pdf](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/20232a70-4439-4ef3-9abc-92968edf91e6/ALTIBASE_%EC%9D%B4%EC%A4%91%ED%99%94%ED%99%98%EA%B2%BD%EC%9D%98DDL_%EA%B0%80%EC%9D%B4%EB%93%9C.pdf)
+
+[https://docs.altibase.com/pages/viewpage.action?pageId=13008994](https://docs.altibase.com/pages/viewpage.action?pageId=13008994)
+
+## Altibase Replication 관련 작업 DB 설치 서버
+
+***A side***
+
+- 172.16.48.85
+
+***B side***
+
+- 172.16.48.86
+
+***DB Name***
+
+- emsdb
+
+## Replication 주의사항
+
+1. Replication 작업은 반드시 **sys 계정**으로 한다.
+    
+    ```
+    ID : **sys**
+    PW : **manager**
+    ```
+    
+2. Replication 객체의 아이템 수정/삭제 전 Replication을 stop 해야한다.
+3. Replication 객체의 아이템 수정/삭제 전 Replication 객체의 수정/삭제할 아이템을 drop 해서 Replication 객체의 대상 아이템에서 제거해줘야 한다.
+4. Replication 객체의 아이템을 수정한 후 Replication을 다시 start 해야 한다.
+    1. 아이템 drop은 필요 x
+5. Replication 객체의 생성 여부는 **서비스별 또는 기능별로 생성**한다.
+    1. 자주 사용되는 아이템들로 구성해서 객체를 생성한다.
+        1. Replication stop 은 불가피하다. 
+        2. **자주 사용되지 않는 아이템들로 구성하지 않으면 Replication stop이 필요하지 않은 아이템들까지 stop 해야하니 주의**
+
+## Replication 절차 (A side → B side)
+
+### Replication 객체가 없는 경우
+
+***Replication 객체 만들고, 아이템도 만들어서 추가해주는 작업***
+
+```sql
+-- 0. 계정은 sys로, 대상은 IPG_EMS
+
+**-- 1. 테스트 테이블 생성
+DROP TABLE IPG_EMS.TEST;
+CREATE TABLE IPG_EMS.TEST (
+	SEQ INTEGER NOT NULL PRIMARY KEY,
+	ID INTEGER,
+	NAME VARCHAR(256)
+);**
+
+SELECT * FROM IPG_EMS.TEST;
+
+-- 1_2. 시퀀스 생성
+CREATE SEQUENCE IPG_EMS.TESTSEQ START WITH 10 INCREMENT BY 2 MINVALUE 10 MAXVALUE 999999999999999 CYCLE CACHE 20;
+-- 시퀀스는 홀/짝으로 increment 되게 한다.
+
+**-- 2. replication 객체 생성 후 replication 객체에 아이템 추가
+// create replication 객체명 with peer ip, port from local item to peer item
+create replication rep with '172.16.48.86', 22333 from IPG_EMS.TEST to IPG_EMS.TEST;**
+-- B 사이드에서도 똑같이 CREATE REPLICATION 해줘야함
+
+**-- 3. replication 객체 시작
+ALTER replication rep START;
+
+-- 이중화 구동 상태 확인
+SELECT REPLICATION_NAME, DECODE(IS_STARTED, 0, 'STOPPED', 1, 'STARTED') IS_STARTED FROM SYSTEM_.SYS_REPLICATIONS_;**
+
+-- 4. sync 확인하기
+INSERT INTO IPG_EMS.TEST VALUES (IPG_EMS.TESTSEQ.NEXTVAL, 2, 'min');
+SELECT * FROM IPG_EMS.TEST;
+```
+
+- b side 동일
+
+### Replication 객체가 있는 경우
+
+***Replication item(테이블 ) 생성 및 Replication 객체에 아이템 추가***
+
+```sql
+**-- 0. replication 객체 중지
+ALTER replication rep stop;**
+
+**-- 1. item 생성하기 (테이블 create)
+DROP TABLE IPG_EMS.TEST1; 
+CREATE TABLE IPG_EMS.TEST1 (
+	SEQ INTEGER NOT NULL PRIMARY KEY,
+	ID INTEGER,
+	NAME VARCHAR(256)
+);**
+
+-- 1_2. 시퀀스 생성
+CREATE SEQUENCE IPG_EMS.TEST1SEQ START WITH 10 INCREMENT BY 2 MINVALUE 10 MAXVALUE 999999999999999 CYCLE CACHE 20;
+-- 시퀀스는 홀/짝으로 increment 되게 한다.
+
+SELECT * FROM IPG_EMS.TEST1;
+
+**-- 2. replication 객체는 생성된 객체로 재활용 하기
+ALTER REPLICATION rep ADD TABLE FROM IPG_EMS.TEST1 TO IPG_EMS.TEST1;**
+
+**-- 3. replication 객체 시작
+ALTER replication rep START;
+
+-- 이중화 구동 상태 확인
+SELECT REPLICATION_NAME, DECODE(IS_STARTED, 0, 'STOPPED', 1, 'STARTED') IS_STARTED FROM SYSTEM_.SYS_REPLICATIONS_;**
+
+-- 4. 싱크 확인
+INSERT INTO IPG_EMS.TEST2 VALUES (IPG_EMS.TEST1SEQ.NEXTVAL, 1, 'me');
+SELECT * FROM IPG_EMS.TEST1;
+```
+
+- b side 동일
+- 테이블(아이템)을 생성하거나, 수정할 때는 먼저
+    - replication 객체를 stop하고
+    - replication 객체의 대상에서 drop 해주고 난 후
+    - 테이블을 생성하거나 수정하고
+    - 다시 replication 객체의 대상에 추가해주고
+    - replication 객체를 다시 start 해야한다.
+
+***Replication item(테이블 ) 수정 및 Replication 객체에 아이템 추가***
+
+```sql
+-- 0. replication 객체 중지
+ALTER replication rep stop;
+
+-- 이중화 구동 상태 확인
+SELECT REPLICATION_NAME, DECODE(IS_STARTED, 0, 'STOPPED', 1, 'STARTED') IS_STARTED FROM SYSTEM_.SYS_REPLICATIONS_;
+
+-- 1. replication 객체에 대한 테이블 끊어주기
+ALTER REPLICATION rep DROP TABLE FROM IPG_EMS.TEST1 TO IPG_EMS.TEST1;
+
+-- 2. item 수정하기
+ALTER TABLE table_name
+ADD column_name datatype; -- 테이블 ADD
+
+-- 3. replication 객체에 수정한 아이템 다시 add 해주기
+ALTER REPLICATION rep ADD TABLE FROM IPG_EMS.TEST1 TO IPG_EMS.TEST1;
+
+-- 4. replication 객체 시작
+ALTER replication rep START;
+
+****-- 4. 싱크 확인
+INSERT INTO IPG_EMS.TEST1 VALUES (IPG_EMS.TEST1SEQ.NEXTVAL, 1, 'me');
+SELECT * FROM IPG_EMS.TEST1;
+```
+
+- b side 동일
+- 테이블(아이템)을 생성하거나, 수정할 때는 먼저
+    - replication 객체를 stop하고
+    - replication 객체의 대상에서 drop 해주고 난 후
+    - 테이블을 생성하거나 수정하고
+    - 다시 replication 객체의 대상에 추가해주고
+    - replication 객체를 다시 start 해야한다.
+
+***Replication item(테이블 ) 삭제***
+
+```sql
+-- 0. replication 객체 중지
+ALTER replication rep stop;
+
+-- 이중화 구동 상태 확인
+SELECT REPLICATION_NAME, DECODE(IS_STARTED, 0, 'STOPPED', 1, 'STARTED') IS_STARTED FROM SYSTEM_.SYS_REPLICATIONS_;
+
+-- 1. replication 객체에 대한 테이블 끊어주기
+ALTER REPLICATION rep DROP TABLE FROM IPG_EMS.TEST1 TO IPG_EMS.TEST1;
+
+-- 2. item 삭제하기
+DROP TABLE IPG_EMS.TEST1;
+
+-- 3. replication 객체 시작
+ALTER replication rep START;
+```
+
+- b side 동일
+- 테이블을 drop 하는 경우는 replication 객체에 다시 넣어 줄 필요가 없다.
+
+### 기타
+
+```sql
+-- replication 객체 삭제
+DROP replication rep;
+
+-- 해당 계정의 테이블 목록 확인
+SELECT * FROM SYSTEM_.SYS_TABLES_ WHERE USER_ID = 21;
+
+-- 유저 정보 확인
+SELECT * FROM SYSTEM_.DBA_USERS_;
+
+-- 모든 테이블의 컬럼 정보 확인
+SELECT * FROM SYSTEM_.SYS_COLUMNS_;
+
+-- db에 접속한 모든 세션 확인
+SELECT * FROM V$SESSION;
+
+SELECT * FROM SYSTEM_.SYS_REPL_ITEMS_ ;
+
+-- 이중화 peer 호스트 정보 확인
+SELECT REPLICATION_NAME, HOST_IP, PORT_NO FROM SYSTEM_.SYS_REPL_HOSTS_ ORDER BY HOST_NO;
+
+**-- 이중화 구동 상태 확인**
+SELECT REPLICATION_NAME, DECODE(IS_STARTED, 0, 'STOPPED', 1, 'STARTED') IS_STARTED FROM SYSTEM_.SYS_REPLICATIONS_;
+```
