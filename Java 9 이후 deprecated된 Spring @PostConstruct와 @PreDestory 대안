@@ -26,7 +26,9 @@ public class UserServiceImpl implements UserService, InitializingBean, Disposabl
 
 		List<UserDto> users = new ArrayList<>();
 	
-		**// @PostConstructor 대체, 스프링 컨테이너가 올라온 후(빈 생성 후) 실행됨**
+		**// @PostConstructor 대체
+		// InitializingBean 인터페이스 구현 메서드
+		// UserServiceImpl 'Bean'이 생성될 때 마다 호출된다.**
 		**@Override**
 		public void **afterPropertiesSet()** throws Exceotion {
 				 users = Arrays.asList(
@@ -36,7 +38,9 @@ public class UserServiceImpl implements UserService, InitializingBean, Disposabl
 							new UserDto("kh", 27);
 		}
 	
-		**// @PreDestory 대체, 스프링 컨테이너가 소멸되기 전(빈 소멸 전) 실행됨**
+		**// @PreDestory 대체
+		// DisposableBean 인터페이스 구현 메서드
+		// UserServiceImpl 'Bean'이 소멸될 때 마다 호출되는 메서**
 		**@Override**
 		public void **destroy()** throws Exceotion {
 				 users.empty();
@@ -45,8 +49,56 @@ public class UserServiceImpl implements UserService, InitializingBean, Disposabl
 }
 ```
 
+아래 코드는 추가적으로 이해를 위해 적은 예시이다.
+
+```java
+package com.example.demo.service;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextClosedEvent;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TestService implements **CommandLineRunner, ApplicationListener<ContextClosedEvent>, InitializingBean, DisposableBean** {
+
+    @PostConstruct
+    private void init() {
+        System.err.println("PostConstruct annotation으로 빈이 완전히 생성된 후에 한 번 수행될 메서드에 붙입니다.");
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        System.err.println("commandLineRunner 인터페이스 구현 메서드입니다. '애플리케이션'이 실행될 때 '한 번' 실행됩니다.");
+    }
+
+    @Override
+    public void onApplicationEvent(ContextClosedEvent event) {
+        System.err.println("ApplicationListener<ContextClosedEvent> 인터페이스 구현 메서드 입니다. '애플리케이션'이 죽었을 때 '한 번' 실행됩니다.");
+        System.err.println("이벤트 발생 시간(timestamp) : " + event.getTimestamp());
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.err.println("InitializingBean 인터페이스 구현 메서드입니다. TestService 'Bean'이 생성될 때 마다 호출되는 메서드 입니다.");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        System.err.println("DisposableBean 인터페이스 구현 메서드입니다. TestService 'Bean'이 소멸될 때 마다 호출되는 메서드입니다");
+    }
+}
+
+```
+
 # ref
 
 ---
 
 출처: [https://wedul.site/445](https://wedul.site/445) [wedul:티스토리]
+
+출처: [https://jeong-pro.tistory.com/179](https://jeong-pro.tistory.com/179) [기본기를 쌓는 정아마추어 코딩블로그:티스토리]
