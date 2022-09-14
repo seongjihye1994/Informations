@@ -1,0 +1,52 @@
+# Java 9 이후 deprecated된 Spring @PostConstruct와 @PreDestory 대안
+
+### @PostConstruct와 @PreDestory
+
+@PostConstruct : 빈 생성 후 실행될 로직 작성
+
+@PreDestory : 빈 소멸 전 실행될 로직 작성
+
+네이밍 만으로도 대충 무슨 역할을 하는지 알 수 있는 이 어노테이션들은
+
+자바 9 이후로 밑줄이 쫙 그여졌고, 자바 11에서는 아예 제거될 예정..
+
+쓰지 말라는건데..
+
+그럼 비슷한 대안은 없는걸까?
+
+### InitializingBean, DisposableBean 인터페이스 구현
+
+이 두 인터페이스를 가지고 곧 소멸될 어노테이션들의 대안으로 사용할 수 있겠다.
+
+***afterPropertiesSet()***과 ***destroy()*** 메서드를 오버라이딩해서 사용하자!
+
+```java
+@Service
+public class UserServiceImpl implements UserService, InitializingBean, DisposabledBean {
+
+		List<UserDto> users = new ArrayList<>();
+	
+		**// @PostConstructor 대체, 스프링 컨테이너가 올라온 후(빈 생성 후) 실행됨**
+		**@Override**
+		public void **afterPropertiesSet()** throws Exceotion {
+				 users = Arrays.asList(
+							new UserDto("jihye", 29);
+							new UserDto("young", 30);
+							new UserDto("hee", 27);
+							new UserDto("kh", 27);
+		}
+	
+		**// @PreDestory 대체, 스프링 컨테이너가 소멸되기 전(빈 소멸 전) 실행됨**
+		**@Override**
+		public void **destroy()** throws Exceotion {
+				 users.empty();
+		}
+  
+}
+```
+
+# ref
+
+---
+
+출처: [https://wedul.site/445](https://wedul.site/445) [wedul:티스토리]
