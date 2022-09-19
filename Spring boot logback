@@ -1,0 +1,243 @@
+# Spring boot logback
+
+Spring Boot는 logback이 기본으로 설정되어 있어서 
+
+별도로 라이브러리를 추가하지 않아도 된다.
+
+**spring-boot-starter-web 안에 spring-boot-starter-logging 구현체**가 있다.
+
+만약 spring boot가 아니라면 dependency에 logback 모듈을 추가해야 한다.
+
+maven 인 경우
+
+```xml
+<!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+    <version>1.2.3</version>
+    <scope>test</scope>
+</dependency>
+```
+
+로그를 커스터마이즈하게 설정하여 사용할 수 있는
+
+logback-spring.xml 작성 방법에 대해 알아보자.
+
+### **logback-spring.xml**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--로그 파일 저장 위치-->
+    <property name="LOGS_PATH" value="./logs"/>
+
+		**<!-- appender 부분 : log 형태를 설정함 -->**
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>%d{HH:mm} %-5level %logger{36} - %msg%n</Pattern>
+        </layout>
+    </appender>
+    <appender name="SAMPLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}:%-3relative][%thread] %-5level %logger{35} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="DAILY_ROLLING_FILE_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGS_PATH}/logback.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}:%-3relative][%thread] %-5level %logger{35} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOGS_PATH}/logback.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <!-- or whenever the file size reaches 100MB -->
+                <maxFileSize>5MB</maxFileSize>
+                <!-- kb, mb, gb -->
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+    
+		**<!-- logger 부분 : 설정한 appender를 참조해서 package와 level을 설정 -->**
+    <logger name="com.gaeyou.firstproject" level="DEBUG">
+        <appender-ref ref="SAMPLE" />
+    </logger>
+    <logger name="com.gaeyou.firstproject" level="INFO">
+        <appender-ref ref="DAILY_ROLLING_FILE_APPENDER" />
+    </logger>
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+```
+
+logback-spring.xml은 크게 2가지 영역으로 구분된다.
+
+1. ***appender***
+2. ***logger***
+
+**appender 는 log의 형태를 설정**하고
+
+**logger는 설정한 appender를 참조해서 package와 level을 설정**한다.
+
+**<property>**
+
+설정파일에서 사용될 변수값을 지정함.
+
+```xml
+<!-- 변수 지정 -->
+<property name="APP_NAME" value="nes-stat" />
+<property name="LOG_HISTORY" value="60" />
+<property name="LOG_MAX_FILESIZE" value="50MB" />
+<property name="LOG_TOTAL_FILESIZE" value="1GB" />
+
+<!-- 변수 지정 -->
+<springProfile name="local">
+    <property name="LOG_DIR" value="~/dev" />
+</springProfile>
+<springProfile name="product">
+    <property name="LOG_DIR" value="/var/log/nems" />
+</springProfile>
+```
+
+property name이 key가 되고, value가 value가 됨.
+
+springProfile 은 설정된 프로파일에 따라 다른 변수가 설정됨.
+
+예를들면,
+
+springProfile 을 local로 지정하면, LOG_DIR은 ~/dev 가 되고,
+
+springProfile 을 product로 지정하면, LOG_DIR은 /var/log/nems 가 된다.
+
+**<appender class="">**
+
+appender 의 class 이다.
+
+appender(어디에 출력할 지)
+
+```xml
+<appender name="INFO_LOG" class="ch.qos.logback.core.rolling.**RollingFileAppender**">
+	...
+</appender>
+```
+
+appender의 class 종류는 아래와 같다.
+
+ch.qos.logback.core.**ConsoleAppender** : **콘솔에 로그를 찍음**
+
+ch.qos.logback.core.**FileAppender** : **파일에 로그를 찍음**
+
+ch.qos.logback.core.rolling.**RollingFileAppender** : **여러개의 파일을 순회하면서 로그를 찍음**
+
+ch.qos.logback.classic.net.**SMTPAppender** : **로그를 메일에 찍어 보냄**
+
+ch.qos.logback.classic.db.**DBAppender** : **데이터베이스에 로그를 찍음**
+
+**<layout> 과 <encoder>**
+
+encoder는 layout보다 제어할수 있는 범위가 넓다.
+
+encoder는 시간과 내용을 완전히 제어 할수 있지만
+
+layout은 이벤트 등의 제어에 한계가 있다.
+
+**<pattern>**
+
+로그를 남길 패턴을 설정한다.
+
+```xml
+<!-- 해당 패턴 네이밍으로 현재 로그가 기록됨 -->
+<pattern>[%d{yyyy-MM-dd HH:mm:ss}:%-3relative][%thread] %-5level %logger{35} - %msg%n</pattern> 
+```
+
+%d  => 로그 기록시간
+
+%thread => 현재 Thread 이름
+
+%-5level => 로그 레벨, -5는 출력의 고정폭 (5글자)
+
+%logger{35} => 축약된 logger name, 35는 최대 자릿수
+
+%msg => 로그메시지
+
+%n => 줄바꿈
+
+기타
+
+${PID:-} => 프로세스 아이디
+
+%p => 로깅 레벨
+
+%F => 로깅이 발생한 프로그램 파일명
+
+%M => 로깅일 발생한 메소드의 이름
+
+%l => 로깅이 발생한 호출지의 정보
+
+%L => 로깅이 발생한 호출지의 라인 수
+
+%t => 쓰레드 명
+
+%c => 로깅이 발생한 카테고리
+
+%C => 로깅이 발생한 클래스 명
+
+%m => 로그 메시지
+
+%r => 애플리케이션 시작 이후부터 로깅이 발생한 시점까지의 시간
+
+**<file>**
+
+로그 파일을 저장할 파일명과 경로를 설정한다.
+
+```xml
+<file>./logs/info.log</file>
+```
+
+./logs/ 경로에 info.log 파일명으로 저장함.
+
+**<rollingPolicy class>**
+
+로그 파일을 언제 어떻게 분할할지를 설정한다.
+
+예를들어, **오늘이 지나거나 용량이 100메가를 넘어가면 파일이 분리**되게 한다.
+
+ch.qos.logback.core.rolling.**TimeBasedRollingPolicy** => **일자별 적용**
+
+ch.qos.logback.core.rolling.**SizeAndTimeBasedFNATP** => **일자별 + 크기별 적용**
+
+**<fileNamePattern>**
+
+파일 쓰기가 종료된 log 파일명의 패턴을 지정한다.
+
+.gz나 .zip으로 자동으로 압축할 수도 있다.
+
+```xml
+<!-- 해당 패턴 네이밍으로 이전 파일이 기록됨 -->
+<fileNamePattern>./was-logs/info.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+```
+
+**<maxFileSize>**
+
+로그 파일 최대 용량을 지정한다.
+
+최대 10MB 내외 권장
+
+**<maxHistory>**
+
+최대 파일 생성 갯수를 지정한다.
+
+**<root> 와 <logger>**
+
+root는 logger와 같고, 최상위 패키지에 기본적으로 적용한다.
+
+# ref
+
+---
+
+[https://tecoble.techcourse.co.kr/post/2021-08-07-logback-tutorial/](https://tecoble.techcourse.co.kr/post/2021-08-07-logback-tutorial/)
+
+[https://romeoh.tistory.com/101](https://romeoh.tistory.com/101)
