@@ -1,0 +1,140 @@
+# Hikari Connection Pool
+
+# **DataSource (JDBC)**
+
+히카리 커넥션 풀을 알기 전 데이터소스부터 보자.
+
+jdbc 에서는 커넥션 풀을 만들 수 있는 DataSource 라는 훌륭한 인터페이스를 제공해준다.
+
+DataSource 인터페이스를 살펴보면 아래와 같이 3가지 방법으로 구현 가능하다.
+
+1. 기본 구현 - 표준 연결 오브젝트를 생성합니다.
+2. 연결 풀링 구현 - 연결 풀링에 자동으로 참여하는 연결 오브젝트를 생성합니다. 
+    
+    이 구현체는 중간 계층 연결 풀링 관리자와 함께 작동합니다.
+    
+3. 분산 트랜잭션 구현 - 분산 트랜잭션에 사용할 수 있고 거의 항상 연결 풀링에 참여하는 연결 오브젝트를 생성합니다. 
+    
+    이 구현체는 중간 계층 트랜잭션 관리자와 함께 작동하며 거의 항상 연결 풀링 관리자와 함께 작동합니다.
+    
+
+# hikari cp
+
+HikariCP는 **Springboot 2.0 부터 default로 설정되어 있는 DB Connection Pool**로써 Zero-Overhead가 특징으로 높은 성능을 자랑하는 DB Connection Pool이다.
+
+자바에서는 기본적으로 DataSource 인터페이스를 사용하여 커넥션풀을 관리한다.
+
+Spring에서는 사용자가 직접 커넥션을 관리할 필요없이 자동화된 기법들을 제공하는데
+
+SpringBoot 2.0 이전에는 **tomcat-jdbc**를 사용하다, 현재 2.0이후 부터는 **HikariCP**를 기본옵션으로 채택 하고있다.
+
+JDBC connection pool 중 하나이며 빠르고 간단하다는 장점이 있다.
+
+히카리(光, ひかり)는 일본어로 빛을 의미함.
+
+아래 사진은 HikariCP의 성능을 c3p0 , dbcp2 , tomcat, vibur 과 같은 다른 풀링 프레임워크와 비교한 결과이다.
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/94aae7b9-7e16-41cd-a93d-e5b8e7f398b7/Untitled.png)
+
+그니까 기존 톰캣 커넥션 풀보다 성능이 높다.
+
+HikariCP는 미리 정해놓은 만큼의 Connection을 Connection Pool에 담아 놓는다. 
+
+그 후 요청이 들어오면 Thread 가 Connection을 요청하고, Hikari는 Connection Pool내에 있는Connection을 연결해주는 역할을 한다.
+
+Springboot 환경에서는 application.properties에서 간단하게 HikariCP의 설정을 할 수 있다.
+
+설정은 구글에 치면 많이 나오니 구글에 검색해보도록 하자.
+
+# Hikari CP 사용법
+
+build.gradle에 따로 추가할 필요 없이`"org.springframework.boot:spring-boot-starter-jdbc"`를 추가하면 자동으로 추가된다.
+
+메이븐도 동일하다.
+
+```xml
+<!-- spring boot jdbc -->
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-jdbc</artifactId>
+			**<version>1.3.2.RELEASE</version>**
+</dependency>
+```
+
+히카리 관련 회사에서 나온 이슈는 스프링부트 프로젝트 초기 설정 중 pom.xml에 받아놓은
+
+스프링 부트 라이브러리에서 버전 명시 부분을 삭제하니 히카리 is valid 에러가 떴다.
+
+```xml
+<!-- spring boot jdbc -->
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-jdbc</artifactId>
+**<!--			<version>1.3.2.RELEASE</version>--> 해당 부분 주석하니 히카리 isvalid 에러가 뜸**
+</dependency>
+```
+
+`spring-boot-starer` 로 시작하는 라이브러리는 version 을 명시 하지 않아도 된다고 한다.
+
+상위의 버전을 따라 감.
+
+상위버전??
+
+pom.xml 상단에 있는 
+
+```xml
+<!-- Spring boot version -->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		**<artifactId>spring-boot-starter-parent</artifactId> 이 parent 버전을 따라간다고 함.
+		<version>2.7.0</version>**
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+```
+
+그래서 위의 jdbc 버전을 주석처리 하니 히카리 isvalid 오류가 떴다.
+
+isvalid 오류는 핫빗 개념처럼 db 가 살아있는지?? 를 주기적으로 확인해준다고 한다.
+
+갑자기 왜 이 오류가 뜬건지는 찾아봐야 할 것 같다.
+
+해당 버전 주석 처리와 이 isvalid의 연관관계 ..ㅠㅠ
+
+ 
+
+이 isvalid 오류를 해결하기 위해 히카리 커넥션풀 옵션을 아래처럼 설정해주었다.
+
+```java
+## Hikari will use the above plus the following to setup connection pooling
+spring.datasource.hikari.minimumIdle=5
+spring.datasource.hikari.maximumPoolSize=20
+spring.datasource.hikari.idleTimeout=30000
+spring.datasource.hikari.poolName=SpringBootJPAHikariCP
+spring.datasource.hikari.maxLifetime=2000000
+spring.datasource.hikari.connectionTimeout=30000
+**spring.datasource.hikari.connection-test-query=select 1 from dual 이 부분이 추가됨!!**
+```
+
+**spring.datasource.hikari.connection-test-query=select 1 from dual**
+
+이 부분을 추가해줬다!!
+
+이게 뭐냐면,
+
+커넥션이 유효한지 검사할 때 사용할 쿼리를 지정한다. 
+
+드라이버가 JDBC4를 지원하면 이 프로퍼티를 설정하지 말자. 
+
+이 프로퍼티를 설정하지 않으면 JDBC4의 Conneciton.isValid()를 사용해서 유효한지 검사를 수행한다.
+
+# ref
+
+---
+
+[https://velog.io/@kkj53051000/DB-커넥션-풀과-HikariCP-Java](https://velog.io/@kkj53051000/DB-%EC%BB%A4%EB%84%A5%EC%85%98-%ED%92%80%EA%B3%BC-HikariCP-Java)
+
+[https://velog.io/@miot2j/Spring-DB커넥션풀과-Hikari-CP-알아보기](https://velog.io/@miot2j/Spring-DB%EC%BB%A4%EB%84%A5%EC%85%98%ED%92%80%EA%B3%BC-Hikari-CP-%EC%95%8C%EC%95%84%EB%B3%B4%EA%B8%B0)
+
+[https://techblog.woowahan.com/2663/](https://techblog.woowahan.com/2663/)
+
+[https://techblog.woowahan.com/2664/](https://techblog.woowahan.com/2664/)
