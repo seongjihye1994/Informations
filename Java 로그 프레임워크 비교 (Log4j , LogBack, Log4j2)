@@ -1,0 +1,77 @@
+# Java 로그 프레임워크 ****Log4j / LogBack / Log4j2 비교****
+
+## slf4j 인터페이스
+
+slf4j는 `Simple Logging Facade For Java`의 약자로써 
+
+자체적인 로킹 프레임워크가 아니고 **logger 추상체**로써 
+
+다른 로깅 프레임워크가 접근할 수 있도록 도와주는 추상화 계층이다. 
+
+즉, **logback이나 log4j2와 같은 로킹 프레임워크의 인터페이스의 역할**을 해준다. 
+
+### logback 프레임워크가 구체화
+
+### log4j, log4j2 프레임워크가 구체화
+
+따라서 **slf4j2를 이용하면 코드를 일정하게 유지하면서** 
+
+**구현체의 전환을 통해 다른 로깅 프레임워크로의 전환을 쉽고 간단**하게 할 수 있다.
+
+### java log 프레임워크 등장 순서
+
+<aside>
+🚀 **log4j → logback → log4j2**
+
+</aside>
+
+## log4j
+
+Apache의 log4j는 꽤 오래된 로깅 프레임워크로써, 
+
+2015년 개발팀의 log4j 개발 중단 발표가 있었다.
+
+log4j는 3개의 컴포넌트들로 이루어져 있다.
+
+- ***logger***
+    - 데이터를 기록하는 역할
+- ***appender***
+    - 데이터를 어디에 기록할지 정하는 역할 (파일, 콘솔, jdbc, smtp, 등)
+- ***layout***
+    - 데이터를 어떤 스타일로 기록할지 정하는 역할
+
+## logback
+
+log4j를 기반으로 한 logback은 log4j와 아주 유사하다.
+
+다만 **log4j보다 더 향상된 성능과 필터링 옵션을 제공**하고, **자동 리로드 기능**도 제공한다.
+
+### logback의 자동 리로드 기능
+
+Linux 서버 내에서 log4j를 사용할 시 log 레벨을 변경하게 되면 
+
+서버를 재 가동하여 반영사항을  적용 해줘야 한다.
+
+하지만 **logback.xml을 사용하면 로그 레벨을 수정해도**
+
+**서버를 재 가동할 필요 없이, 즉각 자동 리로드를 지원**해준다.
+
+[Spring boot logback](https://www.notion.so/Spring-boot-logback-19b9c2164a154d1da9ce6dec0a45d21b) 도 참고하자.
+
+## log4j2
+
+log4j2는 가장 최근에 등장했다.
+
+logback과 동일하게 **자동 리로드 기능과 필터링 기능을 제공**한다.
+
+## 사용 방법
+
+각각의 dependency를 maven 또는 gradle을 통해 설정하면 된다.
+
+# ref
+
+---
+
+[https://velog.io/@ym1085/log4j-vs-logBack](https://velog.io/@ym1085/log4j-vs-logBack)
+
+[https://minkwon4.tistory.com/161](https://minkwon4.tistory.com/161)
