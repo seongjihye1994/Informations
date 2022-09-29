@@ -119,6 +119,24 @@ SHA-1로 해싱하고 base64로 인코딩한 값을 “Sec-WebSocket-Accept” �
 
 ![socket.jpg](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/492e7101-b75f-461e-bacf-e79674e66d71/socket.jpg)
 
+TCP 위에서 HTTP로 커넥션이 이루어지면 WS로 전환된다고 했다.
+
+이후 소켓 연결이 이루이지는 과정이 위 그림과 같다.
+
+1. 서버 소켓과 클라이언트 소켓 각각 만듦(`socket()`)
+2. 서버 소켓은 로컬 IP를 가지고 포트를 열고(`bind()`), 
+    
+    클라이언트가 연결하기를 기다림(`listen()`)
+    
+3. 클라이언트 소켓은 IP 주소를 이용해 목적지 호스트를 찾아내고 
+    
+    포트를 이용해 통신 접속점을 찾아내서 연결을 만듦(`connnect()`)
+    
+4. 서버 소켓이 연결을 수락하면(`accept()`), 
+    
+    포트를 이요해 데이터를 주고받음(`send()`, `recv()`)
+    
+
 ## ref
 
 ---
