@@ -1,0 +1,58 @@
+# 깊은 복사 Deep Copy vs 얕은 복사 Shallow Copy
+
+## 얕은 복사
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/fd60d938-7ce9-453b-bd2a-8164418d3c23/Untitled.png)
+
+CopyObject 객체를 참조하고 있는 변수를 복사함.
+
+즉 ***실제 객체는 하나이고 그 객체를 참조하고 있는 레퍼런스 변수만 복사***돼서 생겨남.
+
+같은 객체를 참조하고 있기 때문에 객체를 변경하면 값도 변경됨
+
+```java
+CopyObject original = new CopyObject("JuHyun", 20);
+**CopyObject copy = original; // 얕은 복사**
+
+**copy.setName("JuBal"); // 원본 변경됨!**
+```
+
+## 깊은 복사
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/47425cb5-8d74-4cef-94a7-640f57361820/Untitled.png)
+
+CopyObject 객체를 통째로 복사해서 ***아예 다른 객체로 생성***해버림 (Copy1, Copy2)
+
+Heap 영역에 새로운 공간을 차지함.
+
+같은 객체를 참조하고 있지 않기 때문에 객체 값이 변경되도 원본은 바뀌지 않음.
+
+```java
+public class CopyObject **implements Cloneable** {
+	...
+}
+
+CopyObject original = new CopyObject("JuHyun", 20);
+**CopyObject copy = original.clone(); // 깊은 복사
+
+copy.setName("JuBal"); // 원본 변경 안됨!**
+
+```
+
+## 정리
+
+### 얕은 복사
+
+- ***객체의 주소값만 복사!***
+- ***값 변경시 원본도 변경됨!***
+
+### 깊은 복사
+
+- ***객체 자체를 복사!***
+- ***값 변경시 원본은 변경 안됨!***
+
+# ref
+
+---
+
+[https://zzang9ha.tistory.com/372](https://zzang9ha.tistory.com/372)
