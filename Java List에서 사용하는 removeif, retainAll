@@ -1,0 +1,86 @@
+# Java List에서 사용하는 removeif, retainAll
+
+## removeif - List 에서 특정 요소 삭제
+
+자바 ArrayList에서 리스트를 반복하면서 어떤 ***특정 요소를 삭제***하고 싶으면?
+
+1. for 문을 돌린다.
+2. if문으로 요소에 조건을 건다.
+
+보통 이렇게 사용하지만,
+
+자바 8부터 생긴 removeIf를 사용하면 좀 더 간단하게 해결할 수 있다.
+
+```java
+public static void main(String[] args) {
+
+		List<Integer> test = new ArrayList<Integer>();
+		
+		test.add(1);
+		test.add(2);
+		test.add(3);
+		test.add(4);
+		test.add(5);
+		test.add(6);
+		
+		System.out.println(test);
+		// [1, 2, 3, 4, 5, 6]
+
+		**test.removeIf(m -> m > 3); // 3보다 크면 삭제
+		
+		System.out.println(test);
+		// [1, 2, 3]**
+}
+```
+
+⭐ **test의 원본은 변경되니 주의!**
+
+## **retainAll - 두 List 를 비교하며 공통 요소만 남김**
+
+자바 ***ArrayList 2개를 서로 비교하면서 공통 요소를 찾고 싶다***면?
+
+1. list1 for 문을 돌린다.
+2. list 2 for 문을 돌린다
+3. if문으로 요소에 조건을 건다.
+
+보통 이렇게 사용하지만,
+
+자바 8부터 생긴 retainAll를 사용하면 좀 더 간단하게 해결할 수 있다.
+
+```java
+import java.util.ArrayList;
+
+class ArrayListExample {
+
+    public static void main(String[] args) {
+
+        ArrayList<String> list1 = new ArrayList<>();
+        **list1.add("AA");
+        list1.add("BB");**
+        list1.add("CC");
+        list1.add("DD");
+
+        ArrayList<String> list2 = new ArrayList<>();
+        **list2.add("AA");**
+        **list2.add("BB");**
+        list2.add("EE");
+
+        **list1.retainAll(list2); 
+				// list1과 list2 비교 후 공통 요소만 남기고 list1에서 제거
+				// list2는 변경 없음**
+
+        System.out.println("list1: " + list1); // [AA, BB]
+        System.out.println("list2: " + list2); // [AA, BB, EE]
+    }
+}
+```
+
+⭐ **list1의 원본은 변경되니 주의!**
+
+# ref
+
+---
+
+[https://kdhyo98.tistory.com/38](https://kdhyo98.tistory.com/38)
+
+[https://codemanager.tistory.com/76](https://codemanager.tistory.com/76)
