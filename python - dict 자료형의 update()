@@ -1,0 +1,25 @@
+# dict 자료형의 update()
+
+### update()
+
+***있는 값은 값을 변경하고, 없는 값은 추가함***
+
+```python
+dict_example = {'림코딩': 30, '김갑환': 33, '장고환': 23} 
+print(dict_example) 
+
+dict_example.update({'림코딩':33,'최번개':26}) 
+print(dict_example)
+```
+
+```sql
+출력  
+{'림코딩': 30, '김갑환': 33, '장고환': 23} 
+{**'림코딩': 33**, '김갑환': 33, '장고환': 23, **'최번개': 26**}
+```
+
+# ref
+
+---
+
+[https://devpouch.tistory.com/86](https://devpouch.tistory.com/86)
