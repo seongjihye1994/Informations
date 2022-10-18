@@ -1,0 +1,123 @@
+# 패킷 TTL과 ICMP 프로토콜
+
+# TTL
+
+TTL 은 Time To Live의 약자로, **패킷의 생존 시간**을 의미한다.
+
+IP 패킷 내에 있는 값으로서, 그 **패킷이 네트워크 내에 너무 오래 있어서** 
+
+**버려져야 하는지의 여부를 라우터에게 알려주는 역할**을 한다.
+
+패킷들은, 여러 가지 이유로 적당한 시간 내에 지정한 장소에 배달되지 못하는 수가 있다.
+
+예를 들어, 부정확한 라우팅 테이블(라우팅의 이정표)의 결함은 
+
+패킷을 끝없이 순환하도록 만들 수도 있다.
+
+그래서 일정한 시간이 지나면 그 패킷을 버릴건지 
+
+혹은 재전송할 것인지를 결정하도록 하기 위해서
+
+**발신인에게 알릴 수 있는 방법**으로 TTL이 사용된다.
+
+TTL 초기 값은 OS에 의해 대게 8bit 길이의 패킷 헤더에 설정된다.
+
+TTL 은 일정시간을 초단위로 지정하고, 설정 시간이 지나면 
+
+패킷을 버리도록 하기 위해 고안한 방법이다.
+
+패킷을 받는 각 라우터는 TTL 필드 내의 값에서 **1을 감소**시키는데, 
+
+이는 곧 남은 TTL 값은 **패킷이 버려지기 전에 허용되는 라우터의 갯수**를 의미한다.
+
+그림으로 이해해보자.
+
+a.a.a.a 는 발신인이다.
+
+b.b.b.b 는 수신인이다.
+
+중간 거쳐가는 것은 라우터이다.
+
+![TTL이 1인 패킷은 라우터를 한 번 밖에 도달하지 못한다.
+TTL이 2인 패킷은 라우터를 두 번 밖에 도달하지 못한다.](https://mblogthumb-phinf.pstatic.net/MjAxODA3MDFfMjEg/MDAxNTMwMzc4MzgwMjM0.W6mISalOkfvSDlnM2qy4fN5aNgm5PpmAf6aczO0B2YMg.C6e9WI2mqezyzZ0ZEjLno7tGShpreoRLTS1fH4IN89Ig.PNG.yeopil-yoon/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2018-07-01_%EC%98%A4%EC%A0%84_1.57.31.png?type=w800)
+
+TTL이 1인 패킷은 라우터를 한 번 밖에 도달하지 못한다.
+TTL이 2인 패킷은 라우터를 두 번 밖에 도달하지 못한다.
+
+![TTL이 5는 되어야 패킷이 b.b.b.b 서버에 도달 할 수 있다.](https://mblogthumb-phinf.pstatic.net/MjAxODA3MDFfMjA5/MDAxNTMwMzc4Mzk1NDQ3.RpPAUvhazMOTlHsLTYRhUJvErZ6aDB-lcWA1cAQFx8cg.O5VzqelBtGYdL_W7hHY7SLIZv7bSvMLWlEI1Rhk11xsg.PNG.yeopil-yoon/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2018-07-01_%EC%98%A4%EC%A0%84_1.57.39.png?type=w800)
+
+TTL이 5는 되어야 패킷이 b.b.b.b 서버에 도달 할 수 있다.
+
+즉 TTL은 상대방에 갈때는 라우터당 -1씩 감소되지만, 
+
+Reply(응답)를 받을때는 감소되지 않음을 알 수 있다.
+
+TTL설정은 PC마다 할수있다.
+
+**TTL 값이 0이 되었을때는 라우터는 그것을 감지하여 해당 패킷을 버리고** 
+
+***ICMP 메세지를 발신지(보낸측) host 에게 보내게 된다.**
+
+# **ICMP 프로토콜**
+
+ICMP(Internet Control Message Protocol)의 약자로 TCP/IP 에서 **IP 패킷을 처리할 때 발생되는 문제를 알려주는 프로토콜**이다.
+
+IP에는 오로지 패킷을 목적지에 도달시키기 위한 내용들로만 구성되어 있다. 
+
+따라서 정상적으로 target(목적지) 호스트에 도달하는 경우에는 
+
+IP에서 통신이 성공하고 종료 됨으로 아무런 문제가 없다.
+
+그러나, 만일 전달해야 할 목적지 호스트가 꺼져있거나, 
+
+선이 단절된 경우와 같은 비정상적인 경우에 
+
+이 **패킷 전달을 의뢰한 출발지(src) 호스트에 이러한 사실을 알려야 하지만,** 
+
+**IP에는 그러한 에러에 대한 처리 방법이 명시되어 있지 않다.** 
+
+OSI7계층 중 3계층(Network Layer)의 **IP 프로토콜은** 
+
+**전송상태에 대한 관리가 이루어지지 않는 신뢰할 수 없는 프로토콜**이다.
+
+이러한 IP의 부족한 점을 메꾸기 위해 사용되는것이 바로 ICMP 프로토콜이다.
+
+**ICMP는 해당 호스트가 없거나, 해당 포트에 대기중에 서버 프로그램(프로세스)이 없는 등의** 
+
+**에러 상황이 발생할 경우 IP 헤더에 기록되어 있는 출발지(src) 호스트로** 
+
+**이러한 에러 메세지를 보내주고 네트워크 상태를 진단해주는 역할을 수행**한다.
+
+## ICMP 프로토콜의 구조
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/6c0a8454-3409-416a-90f0-d3fea8f65257/Untitled.png)
+
+- **Type**
+    - ICMP 메시지의 유형 / 용도
+        - ex) **Type 3 : Destination Unreachable 목적지 도달 불가**
+- **Code**
+    - Type의 세부 내용으로 Type과 Code가 조합되어 ICMP 메시지의 목적과 용도를 나타낸다. (Code가 없는 Type도 존재)
+        - ex) **Type 3 Code 3 : Port Unreachable UDP 포트가 열려있지 않음**
+- **Checksum**
+    - ICMP 메시지 오류를 검사하기 위한 값
+- **Rest of the header**
+    - Type 과 Code 에 따라 추가되는 헤더
+- **Data section**
+    - 데이터가 위치하는 영역
+
+이렇게 에러 상황을 받게된 src 호스트는 
+
+target 호스트에 대한 정보를 대충이나마 확인 가능한것이다.
+
+에러 메세지로는 크게 아래의 표가 있다.
+
+| Desination Unreachable (Type 3) | 목적지에 도달하지 못함 |
+| --- | --- |
+| Time Exceeded (Type 11) | 타임 아웃이 발생하여 IP 패킷이 폐기되었음. 사유는 Code로 알 수 있다. |
+| Redirection (Type 5) | 라우팅 경로가 잘못되어 새로운 경로를 이전 호스트에게 알려주는 메세지 |
+
+# ref
+
+---
+
+[https://forward-movement.tistory.com/121](https://forward-movement.tistory.com/121)
