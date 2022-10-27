@@ -1,0 +1,66 @@
+# gRPC (Google Remote Procedure Call)
+
+gRPC 대신 흔히 사용하는 것이 JSON을 이용한 HTTP API이다.
+
+HTTP API는
+
+- client ↔ server
+- server ↔ client
+
+간 서로 데이터를 주고 받을 때 사용되는 통신 방법이다.
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/66604aeb-2a5d-4dad-8943-ac6840b3a8b8/Untitled.png)
+
+요런식으로 HTTP API는 JSON을 이용해 
+
+GET/POST로 클라이언트가 서버에 요청하고
+
+서버는 JSON 응답을 내려준다.
+
+gRPC 아키텍처를 보자.
+
+![Ruby 클라이언트가 gRPC 서버에게 Proto Request 로 요청하고, 
+gRPC 서버가 Ruby 클라이언트에게 Proto Response로 응답한다.](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/7f26f518-e7b8-4245-9652-f9c03e1493c4/Untitled.png)
+
+Ruby 클라이언트가 gRPC 서버에게 Proto Request 로 요청하고, 
+gRPC 서버가 Ruby 클라이언트에게 Proto Response로 응답한다.
+
+위의 HTTP API와의 차이점은?
+
+**GET/POST 대신 Proto Request로 클라이언트가 서버에게 요청**하고
+
+**JSON 대신 Proto Response로 서버가 클라이언트에게 응답**한다.
+
+결국 큰 틀에서 봤을 때는 JSON을 사용한 HTTP API와 같이
+
+gRPC도 결국엔 client ↔ server, server ↔ client 간
+
+데이터를 주고 받는 방식 중 하나이다.
+
+그렇다면 RPC가 뭘 의미하는 것일까?
+
+RPC는 분산 환경 시스템에서 서로 다른 컴퓨터 프로그램들이
+
+서로 다른 주소에서 서로를 호출하지만
+
+마치 같은 주소에서 호출하는 것 처럼 작동하게 하는 원격 프로시져 프로토콜이다.
+
+즉, **프로그램들은 서로가 누구인지 알 필요 없이**
+
+**정해진 방식대로 단수니 함수 호출만 하면 서로 통신할 수 있는 것!**
+
+위 사진을 예제로 들면 Ruby Client는 통신하고 있는 C++ Service가 어느 위치에 있던, 
+
+어떤 코드로 작성되었던 간에 상관 없이 정해진 Proto라는 규격만 있으면 
+
+자유롭게 데이터를 주고 받을 수 있는 것이다.
+
+gRPC는 google이 만든 protobuf 라는 방식을 사용해서 
+
+RPC라는 프로토콜 데이터를 주고받는 플랫폼이다.
+
+# ref
+
+---
+
+[https://devjin-blog.com/golang-grpc-server-1/](https://devjin-blog.com/golang-grpc-server-1/)
